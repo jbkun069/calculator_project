@@ -24,34 +24,34 @@ class Calculator:
         # Track cursor position
         self.display.icursor(0)  # Start cursor at beginning
         
-        # Button layout (adjusted to fit 1/x and +/-)
+        # Button layout
         self.buttons = []
         buttons_layout = [
             ['7', '8', '9', '/', 'sqrt'],
             ['4', '5', '6', '*', 'fact'],
             ['1', '2', '3', '-', 'pi'],
             ['0', '.', '=', '+', '^'],
-            ['(', ')', 'C', '<-', '1/x'],  # Replaced 'theme' with '1/x'
-            ['+/-', 'theme', '', '', ''],  # Added new row for +/- and moved theme
+            ['(', ')', 'C', '<-', '1/x'],
+            ['+/-', 'theme', '', '', '']
         ]
         
-        # Create buttons (now 6 rows)
+        # Create buttons
         for row in range(6):
             for col in range(5):
                 if row == 5 and col > 1:  # Skip empty spots in last row
                     continue
                 label = buttons_layout[row][col]
-                if label:  # Only create button if label exists
+                if label:
                     button = tk.Button(self.master, text=label, font=('Arial', 15), width=5, height=2,
                                       bg=self.current_theme['bg'], fg=self.current_theme['fg'],
                                       command=lambda l=label: self.button_press(l))
                     button.grid(row=row + 1, column=col, sticky='nsew')
                     self.buttons.append(button)
         
-        # Configure grid to expand (now 6 rows)
+        # Configure grid to expand
         for i in range(5):
             self.master.columnconfigure(i, weight=1)
-        for i in range(7):  # Adjusted to 7 rows (display + 6 button rows)
+        for i in range(7):
             self.master.rowconfigure(i, weight=1)
 
     def button_press(self, label):
@@ -135,7 +135,7 @@ class Calculator:
             new_text = current[:start_pos] + new_number + after_cursor
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos)  # Keep cursor at same relative position
-        # If no number, do nothing (or could insert '-', but we'll keep it simple)
+        # If no number, do nothing
 
     def calculate(self):
         """Evaluate the expression and display the result."""
