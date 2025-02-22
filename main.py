@@ -21,6 +21,9 @@ class Calculator:
         self.display.grid(row=0, column=0, columnspan=5, sticky='nsew')
         self.display.bind('<Key>', lambda e: 'break')  # Prevent direct keyboard input
         
+        # Track cursor position
+        self.display.icursor(0)  # Start cursor at beginning
+        
         # Button layout
         self.buttons = []
         buttons_layout = [
@@ -50,22 +53,48 @@ class Calculator:
     def button_press(self, label):
         """Handle button presses."""
         current = self.display_var.get()
+        cursor_pos = self.display.index(tk.INSERT)  # Get current cursor position
+        
         if label in '0123456789.+-*/^()':  # Digits, operators, power, parentheses
-            self.display_var.set(current + label)
+            new_text = current[:cursor_pos] + label + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + 1)
         elif label == 'C':  # Clear all
             self.display_var.set("")
+            self.display.icursor(0)
         elif label == '<-':  # Backspace
-            self.display_var.set(current[:-1])
+            if cursor_pos > 0:
+                new_text = current[:cursor_pos - 1] + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos - 1)
         elif label == '=':  # Calculate result
             self.calculate()
-        elif label == 'sqrt':  # Square root function
-            self.display_var.set(current + "sqrt(")
-        elif label == 'fact':  # Factorial function
-            self.display_var.set(current + "fact(")
+            self.display.icursor(len(self.display_var.get()))
+        elif label in ['sqrt', 'fact']:  # Square root or factorial
+            self.handle_function(label, current, cursor_pos)
         elif label == 'pi':  # Pi constant
-            self.display_var.set(current + "pi")
+            new_text = current[:cursor_pos] + "pi" + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + 2)
         elif label == 'theme':  # Toggle theme
             self.toggle_theme()
+
+    def handle_function(self, func, current, cursor_pos):
+        """Handle sqrt and fact to auto-close brackets and wrap numbers."""
+        # Check if there's a number immediately before the cursor
+        before_cursor = current[:cursor_pos]
+        number_match = re.search(r'(\d+\.?\d*)$', before_cursor)  # Find trailing number
+        
+        if number_match:  # If a number precedes the cursor
+            number = number_match.group(1)
+            start_pos = cursor_pos - len(number)
+            new_text = current[:start_pos] + f"{func}({number})" + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(start_pos + len(func) + len(number) + 2)  # After closing parenthesis
+        else:  # No number, insert function with auto-closed brackets
+            new_text = current[:cursor_pos] + f"{func}()" + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + len(func) + 1)  # Inside parentheses
 
     def calculate(self):
         """Evaluate the expression and display the result."""
