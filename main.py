@@ -28,7 +28,7 @@ class Calculator:
         # Track cursor position
         self.display.icursor(0)
         
-        # Button layout (7 rows, 4 columns, with parentheses)
+        # Button layout (7 rows, 4 columns, adding ^)
         self.buttons = []
         buttons_layout = [
             ['AC', 'DEL', '%', '+'],
@@ -37,7 +37,7 @@ class Calculator:
             ['1', '2', '3', '/'],
             ['0', '.', '=', 'sqrt'],
             ['fact', 'pi', '(', ')'],
-            ['1/x', '+/-', '', '']  # Adjusted to fit, removed some empty space
+            ['1/x', '^', '+/-', '']  # Added ^, removed some empty space
         ]
         
         # Create buttons with rounded, modern styling
@@ -107,6 +107,10 @@ class Calculator:
             self.handle_percentage(current, cursor_pos)
         elif label in '()':  # Parentheses
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + 1)
+        elif label == '^':  # Power operator
+            new_text = current[:cursor_pos] + '^' + current[cursor_pos:]
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos + 1)
 
