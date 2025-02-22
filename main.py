@@ -24,30 +24,34 @@ class Calculator:
         # Track cursor position
         self.display.icursor(0)  # Start cursor at beginning
         
-        # Button layout
+        # Button layout (adjusted to fit 1/x and +/-)
         self.buttons = []
         buttons_layout = [
             ['7', '8', '9', '/', 'sqrt'],
             ['4', '5', '6', '*', 'fact'],
             ['1', '2', '3', '-', 'pi'],
             ['0', '.', '=', '+', '^'],
-            ['(', ')', 'C', '<-', 'theme']
+            ['(', ')', 'C', '<-', '1/x'],  # Replaced 'theme' with '1/x'
+            ['+/-', 'theme', '', '', ''],  # Added new row for +/- and moved theme
         ]
         
-        # Create buttons
-        for row in range(5):
+        # Create buttons (now 6 rows)
+        for row in range(6):
             for col in range(5):
+                if row == 5 and col > 1:  # Skip empty spots in last row
+                    continue
                 label = buttons_layout[row][col]
-                button = tk.Button(self.master, text=label, font=('Arial', 15), width=5, height=2,
-                                  bg=self.current_theme['bg'], fg=self.current_theme['fg'],
-                                  command=lambda l=label: self.button_press(l))
-                button.grid(row=row + 1, column=col, sticky='nsew')
-                self.buttons.append(button)
+                if label:  # Only create button if label exists
+                    button = tk.Button(self.master, text=label, font=('Arial', 15), width=5, height=2,
+                                      bg=self.current_theme['bg'], fg=self.current_theme['fg'],
+                                      command=lambda l=label: self.button_press(l))
+                    button.grid(row=row + 1, column=col, sticky='nsew')
+                    self.buttons.append(button)
         
-        # Configure grid to expand
+        # Configure grid to expand (now 6 rows)
         for i in range(5):
             self.master.columnconfigure(i, weight=1)
-        for i in range(6):
+        for i in range(7):  # Adjusted to 7 rows (display + 6 button rows)
             self.master.rowconfigure(i, weight=1)
 
     def button_press(self, label):
@@ -78,10 +82,13 @@ class Calculator:
             self.display.icursor(cursor_pos + 2)
         elif label == 'theme':  # Toggle theme
             self.toggle_theme()
+        elif label == '1/x':  # Inverse function
+            self.handle_inverse(current, cursor_pos)
+        elif label == '+/-':  # Sign toggle
+            self.handle_sign_toggle(current, cursor_pos)
 
     def handle_function(self, func, current, cursor_pos):
         """Handle sqrt and fact to auto-close brackets and wrap numbers."""
-        # Check if there's a number immediately before the cursor
         before_cursor = current[:cursor_pos]
         number_match = re.search(r'(\d+\.?\d*)$', before_cursor)  # Find trailing number
         
@@ -95,6 +102,40 @@ class Calculator:
             new_text = current[:cursor_pos] + f"{func}()" + current[cursor_pos:]
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos + len(func) + 1)  # Inside parentheses
+
+    def handle_inverse(self, current, cursor_pos):
+        """Handle inverse (1/x) function."""
+        before_cursor = current[:cursor_pos]
+        number_match = re.search(r'(\d+\.?\d*)$', before_cursor)  # Find trailing number
+        
+        if number_match:  # If a number precedes the cursor
+            number = number_match.group(1)
+            start_pos = cursor_pos - len(number)
+            new_text = current[:start_pos] + f"1/{number}" + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(start_pos + 2 + len(number))  # After the inverse
+        else:  # No number, insert 1/ for user to complete
+            new_text = current[:cursor_pos] + "1/" + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + 2)  # After the /
+
+    def handle_sign_toggle(self, current, cursor_pos):
+        """Toggle the sign of the number before the cursor."""
+        before_cursor = current[:cursor_pos]
+        after_cursor = current[cursor_pos:]
+        number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)  # Include possible negative sign
+        
+        if number_match:  # If a number precedes the cursor
+            number = number_match.group(1)
+            start_pos = cursor_pos - len(number)
+            if number.startswith('-'):  # Remove the negative sign
+                new_number = number[1:]
+            else:  # Add a negative sign
+                new_number = '-' + number
+            new_text = current[:start_pos] + new_number + after_cursor
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos)  # Keep cursor at same relative position
+        # If no number, do nothing (or could insert '-', but we'll keep it simple)
 
     def calculate(self):
         """Evaluate the expression and display the result."""
