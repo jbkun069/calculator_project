@@ -28,7 +28,7 @@ class Calculator:
         # Track cursor position
         self.display.icursor(0)
         
-        # Button layout (7 rows, 4 columns, adding parentheses)
+        # Button layout (7 rows, 4 columns, with parentheses)
         self.buttons = []
         buttons_layout = [
             ['AC', 'DEL', '%', '+'],
@@ -37,7 +37,7 @@ class Calculator:
             ['1', '2', '3', '/'],
             ['0', '.', '=', 'sqrt'],
             ['fact', 'pi', '(', ')'],
-            ['1/x', '+/-', '', '']  # Adjusted to fit parentheses, removed some empty space
+            ['1/x', '+/-', '', '']  # Adjusted to fit, removed some empty space
         ]
         
         # Create buttons with rounded, modern styling
@@ -163,33 +163,35 @@ class Calculator:
         
         if number_match:
             number = float(number_match.group(1))
-            # Find the last operator and preceding number for percentage calculation
-            expr_before = before_cursor.rsplit('+-*/', 1)[0].strip()
-            if expr_before:
-                try:
-                    # Parse the expression before the operator to get the previous number
-                    prev_number = float(eval(expr_before, {'__builtins__': {}}, 
-                                          {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial}))
-                    percentage = prev_number * (number / 100)
-                    # Replace the percentage number with the calculated result
-                    operator_pos = before_cursor.rfind('+-*/')
-                    if operator_pos != -1:
-                        start_pos = operator_pos + 1
-                        new_text = current[:start_pos] + str(percentage) + current[cursor_pos:]
-                        self.display_var.set(new_text)
-                        self.display.icursor(start_pos + len(str(percentage)))
-                    else:
-                        self.display_var.set(str(percentage))
-                        self.display.icursor(len(str(percentage)))
-                except Exception:
-                    self.display_var.set("Error: Invalid percentage")
-            else:
-                # If no operator, just convert to percentage (number / 100)
-                result = number / 100
-                start_pos = cursor_pos - len(str(number))
-                new_text = current[:start_pos] + str(result) + current[cursor_pos:]
-                self.display_var.set(new_text)
-                self.display.icursor(start_pos + len(str(result)))
+            # Find the last operator and the number before it
+            expr_parts = re.split(r'([+\-*/])', before_cursor)
+            if len(expr_parts) > 1:
+                # Get the last number and operator
+                for i in range(len(expr_parts) - 1, -1, -1):
+                    if expr_parts[i].strip() in '+-*/':
+                        operator = expr_parts[i]
+                        # Find the number before the operator
+                        prev_number_str = ''.join(expr_parts[:i]).strip()
+                        if prev_number_str:
+                            try:
+                                prev_number = float(eval(prev_number_str, {'__builtins__': {}}, 
+                                                      {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial}))
+                                percentage = prev_number * (number / 100)
+                                # Replace the percentage number with the calculated result
+                                start_pos = cursor_pos - len(str(number))
+                                new_text = current[:start_pos] + str(percentage) + current[cursor_pos:]
+                                self.display_var.set(new_text)
+                                self.display.icursor(start_pos + len(str(percentage)))
+                                return
+                            except Exception:
+                                self.display_var.set("Error: Invalid percentage")
+                                return
+            # If no operator or error, treat as standalone percentage (number / 100)
+            result = number / 100
+            start_pos = cursor_pos - len(str(number))
+            new_text = current[:start_pos] + str(result) + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(start_pos + len(str(result)))
         else:
             self.display_var.set("Error: No number before %")
 
