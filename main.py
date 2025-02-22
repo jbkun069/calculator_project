@@ -28,7 +28,7 @@ class Calculator:
         # Track cursor position
         self.display.icursor(0)
         
-        # Button layout (7 rows, 4 columns, inspired by the image)
+        # Button layout (7 rows, 4 columns, adding parentheses)
         self.buttons = []
         buttons_layout = [
             ['AC', 'DEL', '%', '+'],
@@ -36,24 +36,26 @@ class Calculator:
             ['4', '5', '6', '*'],
             ['1', '2', '3', '/'],
             ['0', '.', '=', 'sqrt'],
-            ['fact', 'pi', '1/x', '+/-']
+            ['fact', 'pi', '(', ')'],
+            ['1/x', '+/-', '', '']  # Adjusted to fit parentheses, removed some empty space
         ]
         
         # Create buttons with rounded, modern styling
-        for row in range(6):
+        for row in range(7):
             for col in range(4):
                 label = buttons_layout[row][col]
-                button = tk.Button(self.master, text=label, font=('Arial', 14, 'bold'), width=7, height=2,
-                                  bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'],
-                                  relief='flat', highlightbackground='#ff8c00', highlightthickness=1,
-                                  command=lambda l=label: self.button_press(l))
-                button.grid(row=row + 1, column=col, sticky='nsew', padx=2, pady=2)
-                self.buttons.append(button)
+                if label:  # Only create button if label exists
+                    button = tk.Button(self.master, text=label, font=('Arial', 14, 'bold'), width=7, height=2,
+                                      bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'],
+                                      relief='flat', highlightbackground='#ff8c00', highlightthickness=1,
+                                      command=lambda l=label: self.button_press(l))
+                    button.grid(row=row + 1, column=col, sticky='nsew', padx=2, pady=2)
+                    self.buttons.append(button)
         
         # Configure grid for proportional scaling
         for i in range(4):
             self.master.columnconfigure(i, weight=1)
-        for i in range(7):
+        for i in range(8):  # Updated to 8 rows (display + 7 button rows)
             self.master.rowconfigure(i, weight=1)
         
         # Add right-click context menu for theme toggle
@@ -70,17 +72,23 @@ class Calculator:
         current = self.display_var.get()
         cursor_pos = self.display.index(tk.INSERT)
         
+        # Handle initial number placement (replace "0" with first digit)
+        if current == "0" and label in '0123456789':
+            self.display_var.set(label)
+            self.display.icursor(1)
+            return
+        
         if label in '0123456789.+-*/^()':  # Digits, operators, power, parentheses
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos + 1)
-        elif label == 'AC':  # All Clear (replaces C)
-            self.display_var.set("")
+        elif label == 'AC':  # All Clear
+            self.display_var.set("0")
             self.display.icursor(0)
-        elif label == 'DEL':  # Delete (replaces <-)
+        elif label == 'DEL':  # Delete
             if cursor_pos > 0:
                 new_text = current[:cursor_pos - 1] + current[cursor_pos:]
-                self.display_var.set(new_text)
+                self.display_var.set(new_text if new_text else "0")
                 self.display.icursor(cursor_pos - 1)
         elif label == '=':  # Calculate result
             self.calculate()
@@ -97,6 +105,10 @@ class Calculator:
             self.handle_sign_toggle(current, cursor_pos)
         elif label == '%':  # Percentage
             self.handle_percentage(current, cursor_pos)
+        elif label in '()':  # Parentheses
+            new_text = current[:cursor_pos] + label + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.display.icursor(cursor_pos + 1)
 
     def handle_function(self, func, current, cursor_pos):
         """Handle sqrt and fact to auto-close brackets and wrap numbers."""
@@ -151,27 +163,28 @@ class Calculator:
         
         if number_match:
             number = float(number_match.group(1))
-            # If before an operator, assume it's a percentage of the previous number
-            if cursor_pos < len(current) and current[cursor_pos] in '+-*/':
-                operator = current[cursor_pos]
-                # Find the previous number (simplified for basic cases)
-                prev_expr = before_cursor.rsplit('+-*/', 1)[0].strip()
-                if prev_expr:
-                    try:
-                        prev_number = float(eval(prev_expr, {'__builtins__': {}}, 
-                                              {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial}))
-                        percentage = prev_number * (number / 100)
-                        start_pos = cursor_pos - len(str(number))
+            # Find the last operator and preceding number for percentage calculation
+            expr_before = before_cursor.rsplit('+-*/', 1)[0].strip()
+            if expr_before:
+                try:
+                    # Parse the expression before the operator to get the previous number
+                    prev_number = float(eval(expr_before, {'__builtins__': {}}, 
+                                          {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial}))
+                    percentage = prev_number * (number / 100)
+                    # Replace the percentage number with the calculated result
+                    operator_pos = before_cursor.rfind('+-*/')
+                    if operator_pos != -1:
+                        start_pos = operator_pos + 1
                         new_text = current[:start_pos] + str(percentage) + current[cursor_pos:]
                         self.display_var.set(new_text)
                         self.display.icursor(start_pos + len(str(percentage)))
-                    except Exception:
-                        self.display_var.set("Error: Invalid percentage")
-                else:
-                    self.display_var.set(f"{number / 100}")
-                    self.display.icursor(len(str(number / 100)))
+                    else:
+                        self.display_var.set(str(percentage))
+                        self.display.icursor(len(str(percentage)))
+                except Exception:
+                    self.display_var.set("Error: Invalid percentage")
             else:
-                # Simple percentage (number / 100)
+                # If no operator, just convert to percentage (number / 100)
                 result = number / 100
                 start_pos = cursor_pos - len(str(number))
                 new_text = current[:start_pos] + str(result) + current[cursor_pos:]
