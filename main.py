@@ -78,9 +78,17 @@ class Calculator:
         is_constant = label == 'pi'
 
         if label in '0123456789.':  # Digits and decimal point
+            # Find if we're inside a negative number
+            before_cursor = current[:cursor_pos]
+            neg_number_match = re.search(r'-\d*$', before_cursor)
+            
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 1)
+            # If we're adding to a negative number, move cursor after the digit
+            if neg_number_match:
+                self.display.icursor(cursor_pos + 1)
+            else:
+                self.display.icursor(cursor_pos + 1)
         elif label == 'AC':  # All Clear
             self.display_var.set("0")
             self.display.icursor(0)
@@ -169,11 +177,13 @@ class Calculator:
             start_pos = cursor_pos - len(number)
             if number.startswith('-'):
                 new_number = number[1:]
+                new_cursor_pos = start_pos + len(new_number)
             else:
                 new_number = '-' + number
+                new_cursor_pos = start_pos + len(new_number)
             new_text = current[:start_pos] + new_number + after_cursor
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos)  # Keep cursor after the toggled number
+            self.display.icursor(new_cursor_pos)  # Place cursor after the entire number
         else:
             # Insert '-' if at the start or after an operator/parenthesis
             if cursor_pos == 0 or (cursor_pos > 0 and current[cursor_pos - 1] in '+-*/^('):
