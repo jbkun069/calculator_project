@@ -32,6 +32,21 @@ class Calculator:
         self.master.bind('<Delete>', lambda e: self.button_press('AC'))
         self.master.bind('<BackSpace>', lambda e: self.button_press('DEL'))
         
+        # Function key bindings
+        self.master.bind('<F1>', lambda e: self.button_press('sqrt'))
+        self.master.bind('<F2>', lambda e: self.button_press('fact'))
+        self.master.bind('<F3>', lambda e: self.button_press('1/x'))
+        self.master.bind('<F4>', lambda e: self.button_press('+/-'))
+        self.master.bind('<F5>', lambda e: self.button_press('pi'))
+        self.master.bind('<F12>', lambda e: self.toggle_theme())
+
+        # Numpad bindings
+        for key in ['<KP_0>', '<KP_1>', '<KP_2>', '<KP_3>', '<KP_4>',
+                   '<KP_5>', '<KP_6>', '<KP_7>', '<KP_8>', '<KP_9>',
+                   '<KP_Add>', '<KP_Subtract>', '<KP_Multiply>', 
+                   '<KP_Divide>', '<KP_Decimal>']:
+            self.master.bind(key, lambda e, k=key: self.handle_numpad(k))
+        
         # Track cursor position
         self.display.icursor(0)
 
@@ -70,6 +85,17 @@ class Calculator:
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
 
+    def handle_numpad(self, key):
+        """Handle numpad key presses"""
+        numpad_map = {
+            '<KP_0>': '0', '<KP_1>': '1', '<KP_2>': '2', '<KP_3>': '3',
+            '<KP_4>': '4', '<KP_5>': '5', '<KP_6>': '6', '<KP_7>': '7',
+            '<KP_8>': '8', '<KP_9>': '9', '<KP_Add>': '+', 
+            '<KP_Subtract>': '-', '<KP_Multiply>': '*', '<KP_Divide>': '/',
+            '<KP_Decimal>': '.'
+        }
+        self.button_press(numpad_map[key])
+
     def handle_keyboard_input(self, event):
         """Handle keyboard input and map it to calculator functions"""
         char = event.char
@@ -77,36 +103,90 @@ class Calculator:
         
         # Prevent default Entry widget behavior
         if keysym not in ['Left', 'Right']:  # Allow cursor movement
-            event.widget.tk_focusNext().focus()  # Remove focus from Entry
-            event.widget.focus_set()  # Set focus back
+            event.widget.tk_focusNext().focus()
+            event.widget.focus_set()
         
-        # Map keyboard inputs to calculator buttons
+        # Complete keyboard mappings
         key_mapping = {
+            # Numbers and basic operators
             '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
             '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
             '+': '+', '-': '-', '*': '*', '/': '/',
             '.': '.', '(': '(', ')': ')',
             '^': '^', '%': '%',
-            '\r': '=',  # Return/Enter key
+            
+            # Function shortcuts (lowercase)
+            's': 'sqrt',  # square root
+            'f': 'fact',  # factorial
+            'i': '1/x',   # inverse
+            'p': 'pi',    # pi constant
+            'n': '+/-',   # negate
+            't': 'AC',    # total clear (t for total)
+            'd': 'DEL',   # delete (d for delete)
+            
+            # Special keys
+            '\r': '=',    # Return/Enter
             '\x08': 'DEL',  # Backspace
-            '\x1b': 'AC',  # Escape
+            '\x1b': 'AC',   # Escape
         }
         
-        # Handle special cases for shifted number keys
+        # Shift key combinations
         shift_mapping = {
+            # Symbols requiring shift
             '(': '(',
             ')': ')',
-            '8': '*',  # Shift+8 for multiplication
-            '6': '^',  # Shift+6 for power
-            '5': '%',  # Shift+5 for percentage
+            '+': '+',
+            '8': '*',     # Shift+8 for multiplication
+            '6': '^',     # Shift+6 for power
+            '5': '%',     # Shift+5 for percentage
+            
+            # Uppercase function shortcuts
+            'S': 'sqrt',
+            'F': 'fact',
+            'I': '1/x',
+            'P': 'pi',
+            'N': '+/-',
+            'T': 'AC',
+            'D': 'DEL',
         }
         
-        if event.state & 0x1:  # Shift is pressed
+        # Control key combinations
+        ctrl_mapping = {
+            's': 'sqrt',
+            'f': 'fact',
+            'i': '1/x',
+            'p': 'pi',
+            'n': '+/-',
+            't': 'AC',
+            'd': 'DEL',
+            'z': 'DEL',   # Ctrl+Z for undo (delete)
+            'c': 'AC',    # Ctrl+C for clear
+            'r': '1/x',   # Ctrl+R for reciprocal
+            'q': 'sqrt',  # Ctrl+Q for square root
+        }
+        
+        # Alt key combinations (for additional functions)
+        alt_mapping = {
+            's': 'sqrt',
+            'f': 'fact',
+            'i': '1/x',
+            'p': 'pi',
+            'n': '+/-',
+        }
+        
+        if event.state & 0x4:  # Control is pressed
+            if event.char in ctrl_mapping:
+                self.button_press(ctrl_mapping[event.char.lower()])
+                return 'break'
+        elif event.state & 0x8:  # Alt is pressed
+            if event.char in alt_mapping:
+                self.button_press(alt_mapping[event.char.lower()])
+                return 'break'
+        elif event.state & 0x1:  # Shift is pressed
             if event.char in shift_mapping:
                 self.button_press(shift_mapping[event.char])
                 return 'break'
-        
-        if char in key_mapping:
+        elif char in key_mapping:
             self.button_press(key_mapping[char])
             return 'break'
         elif keysym in ['Left', 'Right']:
