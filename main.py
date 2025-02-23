@@ -66,12 +66,12 @@ class Calculator:
         current = self.display_var.get()
         cursor_pos = self.display.index(tk.INSERT)
 
-        # Handle initial number placement (replace "0" with first digit)
-        if current == "0" and label in '0123456789':
-            self.display_var.set(label)
-            self.display.icursor(1)
-            return
-
+        # Remove initial zero for any valid input except decimal point
+        if current == "0" and label != '.':
+            if label in '0123456789+-*/^()' or label in ['sqrt', 'fact', '1/x', '%', 'pi', '+/-']:
+                current = ""
+                cursor_pos = 0
+        
         # Determine if the label is an operator, function, or parenthesis
         is_operator = label in '+-*/^'
         is_function = label in ['sqrt', 'fact', '1/x', '%']
