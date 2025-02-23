@@ -21,7 +21,16 @@ class Calculator:
         self.display = tk.Entry(self.master, textvariable=self.display_var, font=('Arial', 20, 'bold'), justify='right',
                                bg='#000000', fg='#ffffff', insertbackground='#ffffff', relief='flat')
         self.display.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
-        self.display.bind('<Key>', lambda e: 'break')  # Prevent direct keyboard input
+        
+        # Modified key binding to handle all keyboard inputs
+        self.display.bind('<Key>', self.handle_keyboard_input)
+        
+        # Additional keyboard bindings
+        self.master.bind('<Return>', lambda e: self.button_press('='))
+        self.master.bind('<KP_Enter>', lambda e: self.button_press('='))
+        self.master.bind('<Escape>', lambda e: self.button_press('AC'))
+        self.master.bind('<Delete>', lambda e: self.button_press('AC'))
+        self.master.bind('<BackSpace>', lambda e: self.button_press('DEL'))
         
         # Track cursor position
         self.display.icursor(0)
@@ -61,10 +70,59 @@ class Calculator:
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
 
+    def handle_keyboard_input(self, event):
+        """Handle keyboard input and map it to calculator functions"""
+        char = event.char
+        keysym = event.keysym
+        
+        # Prevent default Entry widget behavior
+        if keysym not in ['Left', 'Right']:  # Allow cursor movement
+            event.widget.tk_focusNext().focus()  # Remove focus from Entry
+            event.widget.focus_set()  # Set focus back
+        
+        # Map keyboard inputs to calculator buttons
+        key_mapping = {
+            '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
+            '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
+            '+': '+', '-': '-', '*': '*', '/': '/',
+            '.': '.', '(': '(', ')': ')',
+            '^': '^', '%': '%',
+            '\r': '=',  # Return/Enter key
+            '\x08': 'DEL',  # Backspace
+            '\x1b': 'AC',  # Escape
+        }
+        
+        # Handle special cases for shifted number keys
+        shift_mapping = {
+            '(': '(',
+            ')': ')',
+            '8': '*',  # Shift+8 for multiplication
+            '6': '^',  # Shift+6 for power
+            '5': '%',  # Shift+5 for percentage
+        }
+        
+        if event.state & 0x1:  # Shift is pressed
+            if event.char in shift_mapping:
+                self.button_press(shift_mapping[event.char])
+                return 'break'
+        
+        if char in key_mapping:
+            self.button_press(key_mapping[char])
+            return 'break'
+        elif keysym in ['Left', 'Right']:
+            return  # Allow cursor movement
+        
+        return 'break'
+
     def button_press(self, label):
         """Handle button presses, positioning cursor after numbers by default for operators and functions."""
+        # Save current cursor position before updating display
+        try:
+            cursor_pos = self.display.index(tk.INSERT)
+        except tk.TclError:
+            cursor_pos = len(self.display_var.get())
+
         current = self.display_var.get()
-        cursor_pos = self.display.index(tk.INSERT)
 
         # Remove initial zero for any valid input except decimal point
         if current == "0" and label != '.':
