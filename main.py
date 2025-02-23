@@ -21,7 +21,9 @@ class Calculator:
         self.display = tk.Entry(self.master, textvariable=self.display_var, font=('Arial', 20, 'bold'), justify='right',
                                bg='#000000', fg='#ffffff', insertbackground='#ffffff', relief='flat')
         self.display.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
-        self.display.bind('<Key>', lambda e: 'break')
+        self.display.bind('<Key>', lambda e: 'break')  # Prevent direct keyboard input
+        
+        # Track cursor position
         self.display.icursor(0)
 
         # Button layout
@@ -60,51 +62,64 @@ class Calculator:
         self.context_menu.post(event.x_root, event.y_root)
 
     def button_press(self, label):
+        """Handle button presses, positioning cursor after numbers by default for operators and functions."""
         current = self.display_var.get()
         cursor_pos = self.display.index(tk.INSERT)
 
+        # Handle initial number placement (replace "0" with first digit)
         if current == "0" and label in '0123456789':
             self.display_var.set(label)
             self.display.icursor(1)
             return
 
-        if label in '0123456789.+-*/^()':
+        # Determine if the label is an operator, function, or parenthesis
+        is_operator = label in '+-*/^'
+        is_function = label in ['sqrt', 'fact', '1/x', '%']
+        is_constant = label == 'pi'
+
+        if label in '0123456789.':  # Digits and decimal point
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos + 1)
-        elif label == 'AC':
+        elif label == 'AC':  # All Clear
             self.display_var.set("0")
             self.display.icursor(0)
-        elif label == 'DEL':
+        elif label == 'DEL':  # Delete
             if cursor_pos > 0:
                 new_text = current[:cursor_pos - 1] + current[cursor_pos:]
                 self.display_var.set(new_text if new_text else "0")
                 self.display.icursor(cursor_pos - 1)
-        elif label == '=':
+        elif label == '=':  # Calculate result
             self.calculate()
             self.display.icursor(len(self.display_var.get()))
-        elif label in ['sqrt', 'fact']:
+        elif is_operator:
+            # Find the last number or expression end and place cursor after it
+            last_number_match = re.search(r'[-+]?\d+\.?\d*$', current[:cursor_pos])
+            if last_number_match:
+                start_pos = last_number_match.start()
+                new_text = current[:cursor_pos] + label + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos + len(label) + (cursor_pos - start_pos))
+            else:
+                new_text = current[:cursor_pos] + label + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos + len(label))
+        elif is_function:
             self.handle_function(label, current, cursor_pos)
-        elif label == 'pi':
-            new_text = current[:cursor_pos] + "pi" + current[cursor_pos:]
+        elif is_constant:
+            # Insert 'pi' as a constant, not a function
+            new_text = current[:cursor_pos] + 'pi' + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 2)
-        elif label == '1/x':
-            self.handle_inverse(current, cursor_pos)
-        elif label == '+/-':
-            self.handle_sign_toggle(current, cursor_pos)
-        elif label == '%':
-            self.handle_percentage(current, cursor_pos)
-        elif label in '()':
+            self.display.icursor(cursor_pos + 2)  # After 'pi'
+        elif label in '()':  # Parentheses
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
             self.display.icursor(cursor_pos + 1)
-        elif label == '^':
-            new_text = current[:cursor_pos] + '^' + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 1)
+        elif label == '+/-':  # Sign toggle
+            self.handle_sign_toggle(current, cursor_pos)
 
     def handle_function(self, func, current, cursor_pos):
+        """Handle functions like sqrt, fact, 1/x, %, positioning cursor appropriately."""
         before_cursor = current[:cursor_pos]
         number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
 
@@ -125,30 +140,26 @@ class Calculator:
                 except ValueError:
                     self.display_var.set("Error: Invalid input for factorial")
                     return
+            elif func == '1/x':
+                new_text = current[:start_pos] + f"1/{number}" + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(start_pos + 2 + len(number))  # After the fraction
+                return
             new_text = current[:start_pos] + f"{func}({number})" + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(start_pos + len(func) + len(number) + 2)
+            self.display.icursor(start_pos + len(func) + len(number) + 2)  # After the closing parenthesis
         else:
-            new_text = current[:cursor_pos] + f"{func}()" + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + len(func) + 1)
-
-    def handle_inverse(self, current, cursor_pos):
-        before_cursor = current[:cursor_pos]
-        number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
-
-        if number_match:
-            number = number_match.group(1)
-            start_pos = cursor_pos - len(number)
-            new_text = current[:start_pos] + f"1/{number}" + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(start_pos + 2 + len(number))
-        else:
-            new_text = current[:cursor_pos] + "1/" + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 2)
+            if func == '1/x':
+                new_text = current[:cursor_pos] + "1/" + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos + 2)  # After '/'
+            else:
+                new_text = current[:cursor_pos] + f"{func}()" + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos + len(func) + 1)  # Inside parentheses for immediate input
 
     def handle_sign_toggle(self, current, cursor_pos):
+        """Toggle the sign of the number before the cursor or insert '-' if appropriate."""
         before_cursor = current[:cursor_pos]
         after_cursor = current[cursor_pos:]
         number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
@@ -162,46 +173,19 @@ class Calculator:
                 new_number = '-' + number
             new_text = current[:start_pos] + new_number + after_cursor
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos)
+            self.display.icursor(cursor_pos)  # Keep cursor after the toggled number
         else:
-            new_text = current[:cursor_pos] + '-' + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 1)
-
-    def handle_percentage(self, current, cursor_pos):
-        before_cursor = current[:cursor_pos]
-        number_match = re.search(r'(\d+\.?\d*)$', before_cursor)
-
-        if number_match:
-            number = float(number_match.group(1))
-            expr_parts = re.split(r'([+\-*/])', before_cursor)
-            if len(expr_parts) > 1:
-                for i in range(len(expr_parts) - 1, -1, -1):
-                    if expr_parts[i].strip() in '+-*/':
-                        operator = expr_parts[i]
-                        prev_number_str = ''.join(expr_parts[:i]).strip()
-                        if prev_number_str:
-                            try:
-                                prev_number = float(eval(prev_number_str, {'__builtins__': {}}, 
-                                                      {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial}))
-                                percentage = prev_number * (number / 100)
-                                start_pos = cursor_pos - len(str(number))
-                                new_text = current[:start_pos] + str(percentage) + current[cursor_pos:]
-                                self.display_var.set(new_text)
-                                self.display.icursor(start_pos + len(str(percentage)))
-                                return
-                            except Exception:
-                                self.display_var.set("Error: Invalid percentage")
-                                return
-            result = number / 100
-            start_pos = cursor_pos - len(str(number))
-            new_text = current[:start_pos] + str(result) + current[cursor_pos:]
-            self.display_var.set(new_text)
-            self.display.icursor(start_pos + len(str(result)))
-        else:
-            self.display_var.set("Error: No number before %")
+            # Insert '-' if at the start or after an operator/parenthesis
+            if cursor_pos == 0 or (cursor_pos > 0 and current[cursor_pos - 1] in '+-*/^('):
+                new_text = current[:cursor_pos] + '-' + current[cursor_pos:]
+                self.display_var.set(new_text)
+                self.display.icursor(cursor_pos + 1)
+            else:
+                # If no number and not at a valid position, do nothing
+                pass
 
     def calculate(self):
+        """Evaluate the expression and display the result."""
         expr = self.display_var.get()
         expr = re.sub(r'(-?\d+\.?\d*)\s*\^\s*(-?\d+\.?\d*)', r'(\1)**(\2)', expr)
         expr = expr.replace('^', '**')
