@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import Menu
 import math
 import re
 
@@ -21,18 +20,15 @@ class Calculator:
         self.display = tk.Entry(self.master, textvariable=self.display_var, font=('Arial', 20, 'bold'), justify='right',
                                bg='#000000', fg='#ffffff', insertbackground='#ffffff', relief='flat')
         self.display.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
-        
-        # Modified key binding to handle all keyboard inputs
+        self.display.focus_set()
+
+        # Keyboard bindings
         self.display.bind('<Key>', self.handle_keyboard_input)
-        
-        # Additional keyboard bindings
         self.master.bind('<Return>', lambda e: self.button_press('='))
         self.master.bind('<KP_Enter>', lambda e: self.button_press('='))
         self.master.bind('<Escape>', lambda e: self.button_press('AC'))
         self.master.bind('<Delete>', lambda e: self.button_press('AC'))
         self.master.bind('<BackSpace>', lambda e: self.button_press('DEL'))
-        
-        # Function key bindings
         self.master.bind('<F1>', lambda e: self.button_press('sqrt'))
         self.master.bind('<F2>', lambda e: self.button_press('fact'))
         self.master.bind('<F3>', lambda e: self.button_press('1/x'))
@@ -41,17 +37,14 @@ class Calculator:
         self.master.bind('<F12>', lambda e: self.toggle_theme())
 
         # Numpad bindings
-        for key in ['<KP_0>', '<KP_1>', '<KP_2>', '<KP_3>', '<KP_4>',
-                   '<KP_5>', '<KP_6>', '<KP_7>', '<KP_8>', '<KP_9>',
-                   '<KP_Add>', '<KP_Subtract>', '<KP_Multiply>', 
-                   '<KP_Divide>', '<KP_Decimal>']:
+        numpad_keys = ['<KP_0>', '<KP_1>', '<KP_2>', '<KP_3>', '<KP_4>',
+                       '<KP_5>', '<KP_6>', '<KP_7>', '<KP_8>', '<KP_9>',
+                       '<KP_Add>', '<KP_Subtract>', '<KP_Multiply>', 
+                       '<KP_Divide>', '<KP_Decimal>']
+        for key in numpad_keys:
             self.master.bind(key, lambda e, k=key: self.handle_numpad(k))
-        
-        # Track cursor position
-        self.display.icursor(0)
 
         # Button layout
-        self.buttons = []
         buttons_layout = [
             ['AC', 'DEL', '%', '+'],
             ['7', '8', '9', '-'],
@@ -61,8 +54,23 @@ class Calculator:
             ['fact', 'pi', '(', ')'],
             ['1/x', '^', '+/-', '']
         ]
+        self.create_buttons(buttons_layout)
 
-        for row in range(7):
+        # Grid configuration
+        for i in range(4):
+            self.master.columnconfigure(i, weight=1)
+        for i in range(8):
+            self.master.rowconfigure(i, weight=1)
+
+        # Context menu (Fixed: Use tk.Menu instead of Menu)
+        self.context_menu = tk.Menu(self.master, tearoff=0, bg=self.current_theme['bg'], fg=self.current_theme['fg'])
+        self.context_menu.add_command(label="Toggle Theme", command=self.toggle_theme)
+        self.master.bind('<Button-3>', self.show_context_menu)
+
+    def create_buttons(self, buttons_layout):
+        """Create and grid calculator buttons."""
+        self.buttons = []
+        for row in range(len(buttons_layout)):
             for col in range(4):
                 label = buttons_layout[row][col]
                 if label:
@@ -73,20 +81,12 @@ class Calculator:
                     button.grid(row=row + 1, column=col, sticky='nsew', padx=2, pady=2)
                     self.buttons.append(button)
 
-        for i in range(4):
-            self.master.columnconfigure(i, weight=1)
-        for i in range(8):
-            self.master.rowconfigure(i, weight=1)
-
-        self.context_menu = Menu(self.master, tearoff=0, bg=self.current_theme['bg'], fg=self.current_theme['fg'])
-        self.context_menu.add_command(label="Toggle Theme", command=self.toggle_theme)
-        self.master.bind('<Button-3>', self.show_context_menu)
-
     def show_context_menu(self, event):
+        """Display the right-click context menu."""
         self.context_menu.post(event.x_root, event.y_root)
 
     def handle_numpad(self, key):
-        """Handle numpad key presses"""
+        """Handle numpad key presses."""
         numpad_map = {
             '<KP_0>': '0', '<KP_1>': '1', '<KP_2>': '2', '<KP_3>': '3',
             '<KP_4>': '4', '<KP_5>': '5', '<KP_6>': '6', '<KP_7>': '7',
@@ -97,175 +97,102 @@ class Calculator:
         self.button_press(numpad_map[key])
 
     def handle_keyboard_input(self, event):
-        """Handle keyboard input and map it to calculator functions"""
+        """Handle keyboard input with simplified mappings."""
         char = event.char
         keysym = event.keysym
-        
+
+        # Allow cursor movement without interference
+        if keysym in ['Left', 'Right']:
+            return
+
         # Prevent default Entry widget behavior
-        if keysym not in ['Left', 'Right']:  # Allow cursor movement
+        if keysym not in ['Left', 'Right']:
             event.widget.tk_focusNext().focus()
             event.widget.focus_set()
-        
-        # Complete keyboard mappings
+
         key_mapping = {
-            # Numbers and basic operators
             '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
             '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
             '+': '+', '-': '-', '*': '*', '/': '/',
-            '.': '.', '(': '(', ')': ')',
-            '^': '^', '%': '%',
-            
-            # Function shortcuts (lowercase)
-            's': 'sqrt',  # square root
-            'f': 'fact',  # factorial
-            'i': '1/x',   # inverse
-            'p': 'pi',    # pi constant
-            'n': '+/-',   # negate
-            't': 'AC',    # total clear (t for total)
-            'd': 'DEL',   # delete (d for delete)
-            
-            # Special keys
-            '\r': '=',    # Return/Enter
-            '\x08': 'DEL',  # Backspace
-            '\x1b': 'AC',   # Escape
+            '.': '.', '(': '(', ')': ')', '^': '^', '%': '%',
+            's': 'sqrt', 'f': 'fact', 'i': '1/x', 'p': 'pi', 
+            'n': '+/-', 't': 'AC', 'd': 'DEL',
+            '\r': '=', '\x08': 'DEL', '\x1b': 'AC'
         }
-        
-        # Shift key combinations
+
         shift_mapping = {
-            # Symbols requiring shift
-            '(': '(',
-            ')': ')',
-            '+': '+',
-            '8': '*',     # Shift+8 for multiplication
-            '6': '^',     # Shift+6 for power
-            '5': '%',     # Shift+5 for percentage
-            
-            # Uppercase function shortcuts
-            'S': 'sqrt',
-            'F': 'fact',
-            'I': '1/x',
-            'P': 'pi',
-            'N': '+/-',
-            'T': 'AC',
-            'D': 'DEL',
+            '8': '*', '6': '^', '5': '%'
         }
-        
-        # Control key combinations
+
         ctrl_mapping = {
-            's': 'sqrt',
-            'f': 'fact',
-            'i': '1/x',
-            'p': 'pi',
-            'n': '+/-',
-            't': 'AC',
-            'd': 'DEL',
-            'z': 'DEL',   # Ctrl+Z for undo (delete)
-            'c': 'AC',    # Ctrl+C for clear
-            'r': '1/x',   # Ctrl+R for reciprocal
-            'q': 'sqrt',  # Ctrl+Q for square root
+            'z': 'DEL', 'c': 'AC', 'r': '1/x', 'q': 'sqrt'
         }
-        
-        # Alt key combinations (for additional functions)
-        alt_mapping = {
-            's': 'sqrt',
-            'f': 'fact',
-            'i': '1/x',
-            'p': 'pi',
-            'n': '+/-',
-        }
-        
-        if event.state & 0x4:  # Control is pressed
-            if event.char in ctrl_mapping:
-                self.button_press(ctrl_mapping[event.char.lower()])
-                return 'break'
-        elif event.state & 0x8:  # Alt is pressed
-            if event.char in alt_mapping:
-                self.button_press(alt_mapping[event.char.lower()])
-                return 'break'
-        elif event.state & 0x1:  # Shift is pressed
-            if event.char in shift_mapping:
-                self.button_press(shift_mapping[event.char])
-                return 'break'
+
+        if event.state & 0x4 and char in ctrl_mapping:  # Ctrl pressed
+            self.button_press(ctrl_mapping[char.lower()])
+        elif event.state & 0x1 and char in shift_mapping:  # Shift pressed
+            self.button_press(shift_mapping[char])
         elif char in key_mapping:
             self.button_press(key_mapping[char])
+        else:
             return 'break'
-        elif keysym in ['Left', 'Right']:
-            return  # Allow cursor movement
-        
         return 'break'
 
-    def button_press(self, label):
-        """Handle button presses, positioning cursor after numbers by default for operators and functions."""
-        # Save current cursor position before updating display
+    def set_cursor_position(self, position):
+        """Centralized cursor positioning method."""
         try:
-            cursor_pos = self.display.index(tk.INSERT)
+            self.display.icursor(position)
         except tk.TclError:
-            cursor_pos = len(self.display_var.get())
+            self.display.icursor(len(self.display_var.get()))
 
+    def button_press(self, label):
+        """Handle button presses with consistent cursor positioning."""
+        cursor_pos = self.display.index(tk.INSERT)
         current = self.display_var.get()
 
-        # Remove initial zero for any valid input except decimal point
-        if current == "0" and label != '.':
-            if label in '0123456789+-*/^()' or label in ['sqrt', 'fact', '1/x', '%', 'pi', '+/-']:
-                current = ""
-                cursor_pos = 0
-        
-        # Determine if the label is an operator, function, or parenthesis
+        # Clear initial zero for new input (except decimal)
+        if current == "0" and label != '.' and label not in ['AC', 'DEL', '=']:
+            current = ""
+            cursor_pos = 0
+
         is_operator = label in '+-*/^'
         is_function = label in ['sqrt', 'fact', '1/x', '%']
         is_constant = label == 'pi'
 
-        if label in '0123456789.':  # Digits and decimal point
-            # Find if we're inside a negative number
-            before_cursor = current[:cursor_pos]
-            neg_number_match = re.search(r'-\d*$', before_cursor)
-            
+        if label in '0123456789.':
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
-            # If we're adding to a negative number, move cursor after the digit
-            if neg_number_match:
-                self.display.icursor(cursor_pos + 1)
-            else:
-                self.display.icursor(cursor_pos + 1)
-        elif label == 'AC':  # All Clear
+            self.set_cursor_position(cursor_pos + 1)
+        elif label == 'AC':
             self.display_var.set("0")
-            self.display.icursor(0)
-        elif label == 'DEL':  # Delete
+            self.set_cursor_position(0)
+        elif label == 'DEL':
             if cursor_pos > 0:
                 new_text = current[:cursor_pos - 1] + current[cursor_pos:]
                 self.display_var.set(new_text if new_text else "0")
-                self.display.icursor(cursor_pos - 1)
-        elif label == '=':  # Calculate result
+                self.set_cursor_position(cursor_pos - 1)
+        elif label == '=':
             self.calculate()
-            self.display.icursor(len(self.display_var.get()))
+            self.set_cursor_position(len(self.display_var.get()))
         elif is_operator:
-            # Find the last number or expression end and place cursor after it
-            last_number_match = re.search(r'[-+]?\d+\.?\d*$', current[:cursor_pos])
-            if last_number_match:
-                start_pos = last_number_match.start()
-                new_text = current[:cursor_pos] + label + current[cursor_pos:]
-                self.display_var.set(new_text)
-                self.display.icursor(cursor_pos + len(label) + (cursor_pos - start_pos))
-            else:
-                new_text = current[:cursor_pos] + label + current[cursor_pos:]
-                self.display_var.set(new_text)
-                self.display.icursor(cursor_pos + len(label))
+            new_text = current[:cursor_pos] + label + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.set_cursor_position(cursor_pos + 1)
         elif is_function:
             self.handle_function(label, current, cursor_pos)
         elif is_constant:
-            # Insert 'pi' as a constant, not a function
             new_text = current[:cursor_pos] + 'pi' + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 2)  # After 'pi'
-        elif label in '()':  # Parentheses
+            self.set_cursor_position(cursor_pos + 2)
+        elif label in '()':
             new_text = current[:cursor_pos] + label + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(cursor_pos + 1)
-        elif label == '+/-':  # Sign toggle
+            self.set_cursor_position(cursor_pos + 1)
+        elif label == '+/-':
             self.handle_sign_toggle(current, cursor_pos)
 
     def handle_function(self, func, current, cursor_pos):
-        """Handle functions like sqrt, fact, 1/x, %, positioning cursor appropriately."""
+        """Handle mathematical functions with proper cursor positioning."""
         before_cursor = current[:cursor_pos]
         number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
 
@@ -281,7 +208,7 @@ class Calculator:
                     if num_val == 0:
                         new_text = current[:start_pos] + '1' + current[cursor_pos:]
                         self.display_var.set(new_text)
-                        self.display.icursor(start_pos + 1)
+                        self.set_cursor_position(start_pos + 1)
                         return
                 except ValueError:
                     self.display_var.set("Error: Invalid input for factorial")
@@ -289,23 +216,23 @@ class Calculator:
             elif func == '1/x':
                 new_text = current[:start_pos] + f"1/{number}" + current[cursor_pos:]
                 self.display_var.set(new_text)
-                self.display.icursor(start_pos + 2 + len(number))  # After the fraction
+                self.set_cursor_position(start_pos + 2 + len(number))
                 return
             new_text = current[:start_pos] + f"{func}({number})" + current[cursor_pos:]
             self.display_var.set(new_text)
-            self.display.icursor(start_pos + len(func) + len(number) + 2)  # After the closing parenthesis
+            self.set_cursor_position(start_pos + len(func) + len(number) + 2)
         else:
             if func == '1/x':
                 new_text = current[:cursor_pos] + "1/" + current[cursor_pos:]
                 self.display_var.set(new_text)
-                self.display.icursor(cursor_pos + 2)  # After '/'
+                self.set_cursor_position(cursor_pos + 2)
             else:
                 new_text = current[:cursor_pos] + f"{func}()" + current[cursor_pos:]
                 self.display_var.set(new_text)
-                self.display.icursor(cursor_pos + len(func) + 1)  # Inside parentheses for immediate input
+                self.set_cursor_position(cursor_pos + len(func) + 1)
 
     def handle_sign_toggle(self, current, cursor_pos):
-        """Toggle the sign of the number before the cursor or insert '-' if appropriate."""
+        """Toggle the sign of the number before the cursor."""
         before_cursor = current[:cursor_pos]
         after_cursor = current[cursor_pos:]
         number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
@@ -313,48 +240,43 @@ class Calculator:
         if number_match:
             number = number_match.group(1)
             start_pos = cursor_pos - len(number)
-            if number.startswith('-'):
-                new_number = number[1:]
-                new_cursor_pos = start_pos + len(new_number)
-            else:
-                new_number = '-' + number
-                new_cursor_pos = start_pos + len(new_number)
+            new_number = number[1:] if number.startswith('-') else '-' + number
             new_text = current[:start_pos] + new_number + after_cursor
             self.display_var.set(new_text)
-            self.display.icursor(new_cursor_pos)  # Place cursor after the entire number
-        else:
-            # Insert '-' if at the start or after an operator/parenthesis
-            if cursor_pos == 0 or (cursor_pos > 0 and current[cursor_pos - 1] in '+-*/^('):
-                new_text = current[:cursor_pos] + '-' + current[cursor_pos:]
-                self.display_var.set(new_text)
-                self.display.icursor(cursor_pos + 1)
-            else:
-                # If no number and not at a valid position, do nothing
-                pass
+            self.set_cursor_position(start_pos + len(new_number))
+        elif cursor_pos == 0 or (cursor_pos > 0 and current[cursor_pos - 1] in '+-*/^('):
+            new_text = current[:cursor_pos] + '-' + current[cursor_pos:]
+            self.display_var.set(new_text)
+            self.set_cursor_position(cursor_pos + 1)
 
     def calculate(self):
-        """Evaluate the expression and display the result."""
+        """Evaluate the expression with improved error handling."""
         expr = self.display_var.get()
         expr = re.sub(r'(-?\d+\.?\d*)\s*\^\s*(-?\d+\.?\d*)', r'(\1)**(\2)', expr)
         expr = expr.replace('^', '**')
         expr = re.sub(r'(\d+(?:\.\d+)?|\([^\)]+\))!', r'fact(\1)', expr)
+        expr = re.sub(r'(\d+|\))\s*\(', r'\1*(', expr)  # Implicit multiplication
+        
         try:
             result = eval(expr, {'__builtins__': {}}, 
                          {'sqrt': math.sqrt, 'pi': math.pi, 'fact': math.factorial})
             self.display_var.set(str(result))
-        except Exception as e:
-            self.display_var.set("Error: " + str(e))
+        except ZeroDivisionError:
+            self.display_var.set("Error: Division by zero")
+        except OverflowError:
+            self.display_var.set("Error: Result too large")
+        except ValueError:
+            self.display_var.set("Error: Invalid input")
+        except Exception:
+            self.display_var.set("Error: Invalid expression")
 
     def toggle_theme(self):
-        if self.theme == "dark":
-            self.theme = "light"
-            self.current_theme = self.light_theme
-        else:
-            self.theme = "dark"
-            self.current_theme = self.dark_theme
+        """Toggle between light and dark themes."""
+        self.theme = "light" if self.theme == "dark" else "dark"
+        self.current_theme = self.light_theme if self.theme == "light" else self.dark_theme
 
         self.master.config(bg=self.current_theme['bg'])
-        self.display.config(bg='#000000' if self.theme == "dark" else '#ffffff', 
+        self.display.config(bg='#000000' if self.theme == "dark" else '#ffffff',
                            fg='#ffffff' if self.theme == "dark" else '#000000',
                            insertbackground='#ffffff' if self.theme == "dark" else '#000000')
         for button in self.buttons:
