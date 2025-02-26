@@ -319,6 +319,7 @@ class Calculator:
     def handle_function(self, func, current, cursor_pos):
         """Handle mathematical functions with proper cursor positioning."""
         before_cursor = current[:cursor_pos]
+        after_cursor = current[cursor_pos:]
         number_match = re.search(r'([-]?\d+\.?\d*)$', before_cursor)
 
         if number_match:
@@ -371,7 +372,7 @@ class Calculator:
                 except ValueError:
                     self.display_var.set("Error: Invalid input")
                     return
-                
+
             new_text = current[:start_pos] + f"{func}({number})" + current[cursor_pos:]
             self.display_var.set(new_text)
             self.set_cursor_position(start_pos + len(func) + len(number) + 2)
@@ -417,10 +418,12 @@ class Calculator:
         self.history_index = len(self.history)
         
         # Process the expression
-        expr = expr.replace('π', str(math.pi))  # Handle pi symbol if used
+        expr = expr.replace('\u03c0', str(math.pi))  # Handle pi symbol if used
         expr = re.sub(r'(-?\d+\.?\d*)\s*\^\s*(-?\d+\.?\d*)', r'(\1)**(\2)', expr)
         expr = expr.replace('^', '**')
         expr = re.sub(r'(\d+(?:\.\d+)?|\([^\)]+\))!', r'fact(\1)', expr)
+        # New: convert log10(...) to math.log10(...)
+        expr = re.sub(r'log10\s*\(([^)]+)\)', r'math.log10(\1)', expr)
         expr = re.sub(r'(\d+|\))\s*\(', r'\1*(', expr)  # Implicit multiplication
         
         # Safety: prevent execution of dangerous functions
@@ -431,7 +434,7 @@ class Calculator:
             'sin': math.sin,
             'cos': math.cos,
             'tan': math.tan,
-            'log10': math.log10,  # Add log10 function
+            'log10': math.log10,
             'ln': math.log,
             'abs': abs
         }
