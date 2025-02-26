@@ -5,14 +5,14 @@ import re
 class Calculator:
     def __init__(self, master):
         self.master = master
-        self.master.title("Calculator")
-        self.master.geometry("400x500")
+        self.master.title("Scientific Calculator")
+        self.master.geometry("400x550")  # Slightly taller to accommodate UI improvements
         self.master.configure(bg='#1a1a1a')
 
         # Theme setup
         self.theme = "dark"
-        self.light_theme = {'bg': 'white', 'fg': 'black', 'button_bg': '#f0f0f0', 'button_fg': '#ff8c00'}
-        self.dark_theme = {'bg': '#1a1a1a', 'fg': 'white', 'button_bg': '#333333', 'button_fg': '#ff8c00'}
+        self.light_theme = {'bg': 'white', 'fg': 'black', 'button_bg': '#f0f0f0', 'button_fg': '#0066cc'}
+        self.dark_theme = {'bg': '#1a1a1a', 'fg': 'white', 'button_bg': '#333333', 'button_fg': '#00aaff'}
         self.current_theme = self.dark_theme
 
         # History setup
@@ -21,18 +21,19 @@ class Calculator:
 
         # Display setup
         self.display_var = tk.StringVar(value="0")
-        self.display_frame = tk.Frame(self.master, bg=self.current_theme['bg'])
+        self.display_frame = tk.Frame(self.master, bg=self.current_theme['bg'], bd=2, relief=tk.RAISED)
         self.display_frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
         
         # History label
         self.history_var = tk.StringVar(value="")
         self.history_label = tk.Label(self.display_frame, textvariable=self.history_var, font=('Arial', 12), 
-                                     bg=self.current_theme['bg'], fg=self.current_theme['fg'], anchor='e')
-        self.history_label.pack(fill='x', padx=5)
+                                     bg='#121212', fg=self.current_theme['fg'], anchor='e', padx=5, pady=3)
+        self.history_label.pack(fill='x', padx=5, pady=(5, 0))
         
         # Main display
-        self.display = tk.Entry(self.display_frame, textvariable=self.display_var, font=('Arial', 20, 'bold'), justify='right',
-                               bg='#000000', fg='#ffffff', insertbackground='#ffffff', relief='flat')
+        self.display = tk.Entry(self.display_frame, textvariable=self.display_var, font=('Arial', 24, 'bold'), justify='right',
+                               bg='#000000', fg='#ffffff', insertbackground='#ffffff', relief='flat',
+                               bd=10, highlightthickness=1, highlightcolor='#00aaff')
         self.display.pack(fill='both', expand=True, padx=5, pady=5)
         self.display.focus_set()
 
@@ -48,6 +49,7 @@ class Calculator:
         self.master.bind('<F3>', lambda e: self.button_press('1/x'))
         self.master.bind('<F4>', lambda e: self.button_press('+/-'))
         self.master.bind('<F5>', lambda e: self.button_press('pi'))
+        self.master.bind('<F6>', lambda e: self.button_press('log10'))  # New binding for log10
         self.master.bind('<F12>', lambda e: self.toggle_theme())
         
         # History navigation
@@ -62,9 +64,9 @@ class Calculator:
         for key in numpad_keys:
             self.master.bind(key, lambda e, k=key: self.handle_numpad(k))
 
-        # Button layout
+        # Button layout - Replace % with log10
         buttons_layout = [
-            ['AC', 'DEL', '%', '+'],
+            ['AC', 'DEL', 'log10', '+'],   # Changed % to log10
             ['7', '8', '9', '-'],
             ['4', '5', '6', '*'],
             ['1', '2', '3', '/'],
@@ -72,6 +74,12 @@ class Calculator:
             ['fact', 'pi', '(', ')'],
             ['1/x', '^', '+/-', 'Hist']
         ]
+        
+        # Create button frame for better organization
+        self.button_frame = tk.Frame(self.master, bg=self.current_theme['bg'])
+        self.button_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
+        self.master.rowconfigure(1, weight=1)
+        
         self.create_buttons(buttons_layout)
 
         # Memory functions
@@ -82,8 +90,16 @@ class Calculator:
         # Grid configuration
         for i in range(4):
             self.master.columnconfigure(i, weight=1)
-        for i in range(9):  # Increased to accommodate memory buttons
-            self.master.rowconfigure(i, weight=1)
+            self.button_frame.columnconfigure(i, weight=1)
+        
+        for i in range(8):  # For rows in button frame
+            self.button_frame.rowconfigure(i, weight=1)
+
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
+                                  bg=self.current_theme['bg'], fg=self.current_theme['fg'])
+        self.status_bar.grid(row=2, column=0, columnspan=4, sticky='ew')
 
         # Context menu
         self.context_menu = tk.Menu(self.master, tearoff=0, bg=self.current_theme['bg'], fg=self.current_theme['fg'])
@@ -95,30 +111,50 @@ class Calculator:
         self.master.bind('<Button-3>', self.show_context_menu)
 
     def create_buttons(self, buttons_layout):
-        """Create and grid calculator buttons."""
+        """Create and grid calculator buttons with improved styling."""
         self.buttons = []
         for row in range(len(buttons_layout)):
             for col in range(4):
                 label = buttons_layout[row][col]
                 if label:
-                    button = tk.Button(self.master, text=label, font=('Arial', 14, 'bold'), width=7, height=2,
-                                      bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'],
-                                      relief='flat', highlightbackground='#ff8c00', highlightthickness=1,
+                    # Apply different styling based on button type
+                    if label in ['=']:
+                        bg_color = '#007acc'  # Highlight equals button
+                        fg_color = 'white'
+                    elif label in ['AC', 'DEL']:
+                        bg_color = '#d32f2f'  # Red for clear buttons
+                        fg_color = 'white'
+                    elif label in ['+', '-', '*', '/', '^']:
+                        bg_color = '#555555'  # Darker for operators
+                        fg_color = self.current_theme['button_fg']
+                    elif label in ['sqrt', 'fact', '1/x', 'log10', 'pi']:
+                        bg_color = '#444444'  # Slightly darker for functions
+                        fg_color = '#ffcc00'  # Yellow for functions
+                    else:
+                        bg_color = self.current_theme['button_bg']
+                        fg_color = self.current_theme['button_fg']
+                    
+                    button = tk.Button(self.button_frame, text=label, font=('Arial', 14, 'bold'), 
+                                      bg=bg_color, fg=fg_color,
+                                      relief='raised', bd=3,
+                                      activebackground='#555555', activeforeground='white',
                                       command=lambda l=label: self.button_press(l))
-                    button.grid(row=row + 1, column=col, sticky='nsew', padx=2, pady=2)
+                    
+                    button.grid(row=row, column=col, sticky='nsew', padx=2, pady=2)
                     self.buttons.append(button)
 
     def create_memory_buttons(self, memory_layout):
-        """Create memory function buttons."""
+        """Create memory function buttons with improved styling."""
         for row in range(len(memory_layout)):
             for col in range(4):
                 label = memory_layout[row][col]
                 if label:
-                    button = tk.Button(self.master, text=label, font=('Arial', 12, 'bold'), width=7, height=1,
-                                      bg=self.current_theme['button_bg'], fg='#4CAF50',
-                                      relief='flat', highlightbackground='#ff8c00', highlightthickness=1,
+                    button = tk.Button(self.button_frame, text=label, font=('Arial', 12, 'bold'),
+                                      bg='#006633', fg='white',  # Green for memory buttons
+                                      relief='raised', bd=2,
+                                      activebackground='#008844', activeforeground='white',
                                       command=lambda l=label: self.memory_function(l))
-                    button.grid(row=8, column=col, sticky='nsew', padx=2, pady=2)
+                    button.grid(row=row+7, column=col, sticky='nsew', padx=2, pady=2)
                     self.buttons.append(button)
 
     def memory_function(self, operation):
@@ -127,14 +163,19 @@ class Calculator:
             current_value = float(self.display_var.get())
             if operation == "MC":  # Memory Clear
                 self.memory_value = 0
+                self.status_var.set("Memory cleared")
             elif operation == "MR":  # Memory Recall
                 self.display_var.set(str(self.memory_value))
+                self.status_var.set(f"Memory recalled: {self.memory_value}")
             elif operation == "M+":  # Memory Add
                 self.memory_value += current_value
+                self.status_var.set(f"Added to memory: {self.memory_value}")
             elif operation == "M-":  # Memory Subtract
                 self.memory_value -= current_value
+                self.status_var.set(f"Subtracted from memory: {self.memory_value}")
         except ValueError:
             self.display_var.set("Error: Invalid input")
+            self.status_var.set("Error in memory operation")
 
     def show_context_menu(self, event):
         """Display the right-click context menu."""
@@ -144,21 +185,23 @@ class Calculator:
         """Copy display content to clipboard."""
         self.master.clipboard_clear()
         self.master.clipboard_append(self.display_var.get())
+        self.status_var.set("Copied to clipboard")
 
     def paste_from_clipboard(self):
         """Paste clipboard content to display."""
         try:
             clipboard_text = self.master.clipboard_get()
             # Filter out non-numeric and non-operator characters
-            filtered_text = re.sub(r'[^0-9.+\-*/()^%]', '', clipboard_text)
+            filtered_text = re.sub(r'[^0-9.+\-*/()^]', '', clipboard_text)
             if filtered_text:
                 cursor_pos = self.display.index(tk.INSERT)
                 current = self.display_var.get()
                 new_text = current[:cursor_pos] + filtered_text + current[cursor_pos:]
                 self.display_var.set(new_text)
                 self.set_cursor_position(cursor_pos + len(filtered_text))
+                self.status_var.set("Pasted from clipboard")
         except tk.TclError:
-            pass  # Nothing in clipboard
+            self.status_var.set("Nothing to paste")
 
     def handle_numpad(self, key):
         """Handle numpad key presses."""
@@ -182,26 +225,25 @@ class Calculator:
 
         # Prevent default Entry widget behavior for other keys
         if keysym not in ['Left', 'Right']:
-            # Fix: Don't call tk_focusNext() as it was causing focus issues
             self.display.focus_set()
 
         key_mapping = {
             '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
             '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
             '+': '+', '-': '-', '*': '*', '/': '/',
-            '.': '.', '(': '(', ')': ')', '^': '^', '%': '%',
+            '.': '.', '(': '(', ')': ')', '^': '^', 
             's': 'sqrt', 'f': 'fact', 'i': '1/x', 'p': 'pi', 
-            'n': '+/-', 't': 'AC', 'd': 'DEL',
+            'n': '+/-', 't': 'AC', 'd': 'DEL', 'l': 'log10',  # Added 'l' for log10
             '\r': '=', '\x08': 'DEL', '\x1b': 'AC'
         }
 
         shift_mapping = {
-            '8': '*', '6': '^', '5': '%', '+': '+'
+            '8': '*', '6': '^'
         }
 
         ctrl_mapping = {
             'z': 'DEL', 'c': 'AC', 'r': '1/x', 'q': 'sqrt',
-            'h': 'Hist'  # Added history shortcut
+            'h': 'Hist', 'l': 'log10'  # Added 'l' for log10
         }
 
         if event.state & 0x4 and char.lower() in ctrl_mapping:  # Ctrl pressed
@@ -226,13 +268,16 @@ class Calculator:
         cursor_pos = self.display.index(tk.INSERT)
         current = self.display_var.get()
 
+        # Update status bar
+        self.status_var.set(f"Button pressed: {label}")
+
         # Clear initial zero for new input (except decimal)
         if current == "0" and label != '.' and label not in ['AC', 'DEL', '=', '+/-', 'Hist']:
             current = ""
             cursor_pos = 0
 
         is_operator = label in '+-*/^'
-        is_function = label in ['sqrt', 'fact', '1/x', '%']
+        is_function = label in ['sqrt', 'fact', '1/x', 'log10']  # Added log10
         is_constant = label == 'pi'
 
         if label in '0123456789.':
@@ -258,7 +303,7 @@ class Calculator:
         elif is_function:
             self.handle_function(label, current, cursor_pos)
         elif is_constant:
-            # Fix: Use the actual pi value instead of text "pi"
+            # Use the actual pi value
             new_text = current[:cursor_pos] + str(math.pi) + current[cursor_pos:]
             self.display_var.set(new_text)
             self.set_cursor_position(cursor_pos + len(str(math.pi)))
@@ -279,6 +324,8 @@ class Calculator:
         if number_match:
             number = number_match.group(1)
             start_pos = cursor_pos - len(number)
+            
+            # Function-specific validation
             if func == 'fact':
                 try:
                     num_val = float(number)
@@ -311,6 +358,15 @@ class Calculator:
                     num_val = float(number)
                     if num_val < 0:
                         self.display_var.set("Error: Cannot sqrt negative number")
+                        return
+                except ValueError:
+                    self.display_var.set("Error: Invalid input")
+                    return
+            elif func == 'log10':
+                try:
+                    num_val = float(number)
+                    if num_val <= 0:
+                        self.display_var.set("Error: Cannot take log of zero or negative")
                         return
                 except ValueError:
                     self.display_var.set("Error: Invalid input")
@@ -375,7 +431,7 @@ class Calculator:
             'sin': math.sin,
             'cos': math.cos,
             'tan': math.tan,
-            'log': math.log10,
+            'log10': math.log10,  # Add log10 function
             'ln': math.log,
             'abs': abs
         }
@@ -397,14 +453,21 @@ class Calculator:
             self.history.append(formatted_result)
             self.history_index = len(self.history)
             
+            # Update status bar
+            self.status_var.set("Calculation complete")
+            
         except ZeroDivisionError:
             self.display_var.set("Error: Division by zero")
+            self.status_var.set("Error: Division by zero")
         except OverflowError:
             self.display_var.set("Error: Result too large")
+            self.status_var.set("Error: Result too large")
         except ValueError as e:
             self.display_var.set(f"Error: {str(e)}")
+            self.status_var.set(f"Error: {str(e)}")
         except Exception as e:
             self.display_var.set("Error: Invalid expression")
+            self.status_var.set("Error: Invalid expression")
 
     def toggle_theme(self):
         """Toggle between light and dark themes."""
@@ -413,17 +476,38 @@ class Calculator:
 
         self.master.config(bg=self.current_theme['bg'])
         self.display_frame.config(bg=self.current_theme['bg'])
-        self.history_label.config(bg=self.current_theme['bg'], fg=self.current_theme['fg'])
+        self.button_frame.config(bg=self.current_theme['bg'])
+        self.history_label.config(bg='#121212' if self.theme == "dark" else '#e0e0e0', 
+                                fg=self.current_theme['fg'])
         self.display.config(bg='#000000' if self.theme == "dark" else '#ffffff',
                            fg='#ffffff' if self.theme == "dark" else '#000000',
                            insertbackground='#ffffff' if self.theme == "dark" else '#000000')
         
+        # Update status bar
+        self.status_bar.config(bg=self.current_theme['bg'], fg=self.current_theme['fg'])
+        
         # Update context menu colors
         self.context_menu.config(bg=self.current_theme['bg'], fg=self.current_theme['fg'])
         
-        # Update button colors
+        # Update buttons with new theme colors while preserving special colors
         for button in self.buttons:
-            button.config(bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'])
+            text = button.cget('text')
+            if text in ['=']:
+                continue  # Keep special button colors
+            elif text in ['AC', 'DEL']:
+                continue  # Keep special button colors
+            elif text in ['MC', 'MR', 'M+', 'M-']:
+                continue  # Keep memory button colors
+            elif text in ['+', '-', '*', '/', '^']:
+                button.config(bg='#555555' if self.theme == "dark" else '#dddddd')
+            elif text in ['sqrt', 'fact', '1/x', 'log10', 'pi']:
+                button.config(bg='#444444' if self.theme == "dark" else '#e6e6e6', 
+                            fg='#ffcc00' if self.theme == "dark" else '#0066cc')
+            else:
+                button.config(bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'])
+                
+        # Update status
+        self.status_var.set(f"Theme changed to {self.theme}")
             
     def navigate_history(self, direction):
         """Navigate through calculation history."""
@@ -434,6 +518,7 @@ class Calculator:
         if 0 <= new_index < len(self.history):
             self.history_index = new_index
             self.display_var.set(self.history[self.history_index])
+            self.status_var.set(f"History item {new_index+1}/{len(self.history)}")
 
     def show_history_dialog(self):
         """Display a dialog with calculation history."""
@@ -454,7 +539,7 @@ class Calculator:
         scrollbar.pack(side='right', fill='y')
         
         history_listbox = tk.Listbox(history_frame, bg=self.current_theme['bg'], fg=self.current_theme['fg'],
-                                   font=('Arial', 12), selectbackground='#ff8c00', height=15)
+                                   font=('Arial', 12), selectbackground='#00aaff', height=15)
         history_listbox.pack(side='left', fill='both', expand=True)
         
         # Connect scrollbar to listbox
@@ -465,16 +550,30 @@ class Calculator:
         for item in self.history:
             history_listbox.insert(tk.END, item)
             
+        # Button frame
+        button_frame = tk.Frame(history_window, bg=self.current_theme['bg'])
+        button_frame.pack(fill='x', padx=10, pady=5)
+            
         # Button to use selected history item
         def use_selected():
             selected = history_listbox.curselection()
             if selected:
                 self.display_var.set(self.history[selected[0]])
                 history_window.destroy()
+                self.status_var.set("History item selected")
                 
-        use_button = tk.Button(history_window, text="Use Selected", command=use_selected,
-                              bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'])
-        use_button.pack(pady=10)
+        use_button = tk.Button(button_frame, text="Use Selected", command=use_selected,
+                              bg='#00aaff', fg='white', padx=10, pady=5)
+        use_button.pack(side='left', padx=5)
+        
+        # Button to clear history
+        def clear_and_close():
+            self.clear_history()
+            history_window.destroy()
+            
+        clear_button = tk.Button(button_frame, text="Clear History", command=clear_and_close,
+                               bg='#d32f2f', fg='white', padx=10, pady=5)
+        clear_button.pack(side='right', padx=5)
         
         # Double-click to select item
         history_listbox.bind('<Double-1>', lambda e: use_selected())
@@ -484,6 +583,7 @@ class Calculator:
         self.history = []
         self.history_index = -1
         self.history_var.set("")
+        self.status_var.set("History cleared")
 
 if __name__ == "__main__":
     root = tk.Tk()
