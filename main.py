@@ -4,6 +4,7 @@ import re
 
 print("--- Program Start ---")
 
+
 class Calculator:
     def __init__(self, master):
         print("Calculator: __init__ started")
@@ -61,30 +62,30 @@ class Calculator:
         self.history = []
         # history_index points to the current item being displayed from history,
         # or len(self.history) if current input is not from history
-        self.history_index = 0 
+        self.history_index = 0
 
         # Display setup
         self.display_var = tk.StringVar(value="0")
         self.display_frame = tk.Frame(self.master, bg=self.current_theme['bg'], bd=2, relief=tk.RAISED)
         self.display_frame.grid(row=0, column=0, columnspan=4, sticky='nsew', padx=10, pady=10)
-        
+
         # History label
         self.history_var = tk.StringVar(value="")
-        self.history_label = tk.Label(self.display_frame, textvariable=self.history_var, font=('Arial', 12), 
-                                     bg=self.current_theme['history_label_bg'], fg=self.current_theme['fg'], anchor='e', padx=5, pady=3)
+        self.history_label = tk.Label(self.display_frame, textvariable=self.history_var, font=('Arial', 12),
+                                      bg=self.current_theme['history_label_bg'], fg=self.current_theme['fg'],
+                                      anchor='e', padx=5, pady=3)
         self.history_label.pack(fill='x', padx=5, pady=(5, 0))
-        
+
         # Main display
-        self.display = tk.Entry(self.display_frame, textvariable=self.display_var, font=('Arial', 24, 'bold'), justify='right',
-                               bg=self.current_theme['display_bg'], fg=self.current_theme['display_fg'], 
-                               insertbackground=self.current_theme['display_insert_bg'], relief='flat',
-                               bd=10, highlightthickness=1, highlightcolor=self.current_theme['button_fg'])
+        self.display = tk.Entry(self.display_frame, textvariable=self.display_var, font=('Arial', 24, 'bold'),
+                                justify='right',
+                                bg=self.current_theme['display_bg'], fg=self.current_theme['display_fg'],
+                                insertbackground=self.current_theme['display_insert_bg'], relief='flat',
+                                bd=10, highlightthickness=1, highlightcolor=self.current_theme['button_fg'])
         self.display.pack(fill='both', expand=True, padx=5, pady=5)
         self.display.focus_set()
 
         # Keyboard bindings
-        # Note: handle_keyboard_input must be defined before this line.
-        # Ensure it's part of the class scope and correctly indented.
         self.display.bind('<Key>', self.handle_keyboard_input)
         self.master.bind('<Return>', lambda e: self.button_press('='))
         self.master.bind('<KP_Enter>', lambda e: self.button_press('='))
@@ -98,7 +99,7 @@ class Calculator:
         self.master.bind('<F5>', lambda e: self.button_press('pi'))
         self.master.bind('<F6>', lambda e: self.button_press('log10'))
         self.master.bind('<F12>', lambda e: self.toggle_theme())
-        
+
         # History navigation
         self.master.bind('<Up>', lambda e: self.navigate_history(-1))
         self.master.bind('<Down>', lambda e: self.navigate_history(1))
@@ -107,16 +108,16 @@ class Calculator:
         numpad_keys = {
             '<KP_0>': '0', '<KP_1>': '1', '<KP_2>': '2', '<KP_3>': '3',
             '<KP_4>': '4', '<KP_5>': '5', '<KP_6>': '6', '<KP_7>': '7',
-            '<KP_8>': '8', '<KP_9>': '9', '<KP_Add>': '+', 
-            '<KP_Subtract>': '-', '<KP_Multiply>': '*', 
+            '<KP_8>': '8', '<KP_9>': '9', '<KP_Add>': '+',
+            '<KP_Subtract>': '-', '<KP_Multiply>': '*',
             '<KP_Divide>': '/', '<KP_Decimal>': '.'
         }
         for key, value in numpad_keys.items():
             self.master.bind(key, lambda e, v=value: self.button_press(v))
 
-        # Button layout
+        # MODIFIED: Button layout now includes '%' instead of 'log10'
         buttons_layout = [
-            ['AC', 'DEL', 'log10', '+'],
+            ['AC', 'DEL', '%', '+'],
             ['7', '8', '9', '-'],
             ['4', '5', '6', '*'],
             ['1', '2', '3', '/'],
@@ -132,8 +133,8 @@ class Calculator:
         self.button_frame = tk.Frame(self.master, bg=self.current_theme['bg'])
         self.button_frame.grid(row=1, column=0, columnspan=4, sticky='nsew', padx=5, pady=5)
         self.master.rowconfigure(1, weight=1)
-        
-        self.buttons = [] # Store button references for theme changes
+
+        self.buttons = []  # Store button references for theme changes
         self.create_buttons(buttons_layout)
 
         # Memory functions
@@ -145,14 +146,14 @@ class Calculator:
         for i in range(4):
             self.master.columnconfigure(i, weight=1)
             self.button_frame.columnconfigure(i, weight=1)
-        
-        for i in range(self.main_button_rows_count + len(memory_layout)): # For rows in button frame
+
+        for i in range(self.main_button_rows_count + len(memory_layout)):  # For rows in button frame
             self.button_frame.rowconfigure(i, weight=1)
 
         # Status bar
         self.status_var = tk.StringVar(value="Ready")
         self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                  bg=self.current_theme['bg'], fg=self.current_theme['fg'])
+                                   bg=self.current_theme['bg'], fg=self.current_theme['fg'])
         self.status_bar.grid(row=2, column=0, columnspan=4, sticky='ew')
 
         # Context menu
@@ -163,12 +164,11 @@ class Calculator:
         self.context_menu.add_separator()
         self.context_menu.add_command(label="Clear History", command=self.clear_history)
         self.master.bind('<Button-3>', self.show_context_menu)
-        
+
         # Apply initial theme
         print("Calculator: __init__ completed")
         self._apply_theme_to_widgets()
         print("Theme applied")
-
 
     def _apply_theme_to_widgets(self):
         """Apply the current theme to all widgets."""
@@ -177,12 +177,12 @@ class Calculator:
         self.button_frame.config(bg=self.current_theme['bg'])
         self.history_label.config(bg=self.current_theme['history_label_bg'], fg=self.current_theme['fg'])
         self.display.config(bg=self.current_theme['display_bg'],
-                           fg=self.current_theme['display_fg'],
-                           insertbackground=self.current_theme['display_insert_bg'],
-                           highlightcolor=self.current_theme['button_fg'])
+                            fg=self.current_theme['display_fg'],
+                            insertbackground=self.current_theme['display_insert_bg'],
+                            highlightcolor=self.current_theme['button_fg'])
         self.status_bar.config(bg=self.current_theme['bg'], fg=self.current_theme['fg'])
         self.context_menu.config(bg=self.current_theme['bg'], fg=self.current_theme['fg'])
-        
+
         self._apply_theme_to_buttons()
 
     def _apply_theme_to_buttons(self):
@@ -195,13 +195,13 @@ class Calculator:
                 button.config(bg=self.current_theme['clear_bg'], fg=self.current_theme['clear_fg'])
             elif text in ['MC', 'MR', 'M+', 'M-']:
                 button.config(bg=self.current_theme['memory_bg'], fg=self.current_theme['memory_fg'])
-            elif text in ['+', '-', '*', '/', '^']:
+            elif text in ['+', '-', '*', '/', '^', '%']:  # MODIFIED: Added '%' for operator styling
                 button.config(bg=self.current_theme['operator_bg'], fg=self.current_theme['operator_fg'])
             elif text in ['sqrt', 'fact', '1/x', 'log10', 'pi']:
                 button.config(bg=self.current_theme['function_bg'], fg=self.current_theme['function_fg'])
             else:
                 button.config(bg=self.current_theme['button_bg'], fg=self.current_theme['button_fg'])
-            
+
             # Ensure active colors match base colors for consistency
             button.config(activebackground=button.cget('bg'), activeforeground=button.cget('fg'))
 
@@ -210,9 +210,9 @@ class Calculator:
         for row_idx, row_buttons in enumerate(buttons_layout):
             for col_idx, label in enumerate(row_buttons):
                 if label:
-                    button = tk.Button(self.button_frame, text=label, font=('Arial', 14, 'bold'), 
-                                      relief='raised', bd=3,
-                                      command=lambda l=label: self.button_press(l))
+                    button = tk.Button(self.button_frame, text=label, font=('Arial', 14, 'bold'),
+                                       relief='raised', bd=3,
+                                       command=lambda l=label: self.button_press(l))
                     button.grid(row=row_idx, column=col_idx, sticky='nsew', padx=2, pady=2)
                     self.buttons.append(button)
 
@@ -222,11 +222,11 @@ class Calculator:
             for col_idx, label in enumerate(row_buttons):
                 if label:
                     button = tk.Button(self.button_frame, text=label, font=('Arial', 12, 'bold'),
-                                      relief='raised', bd=2,
-                                      command=lambda l=label: self.memory_function(l))
-                    button.grid(row=row_idx + self.main_button_rows_count, column=col_idx, sticky='nsew', padx=2, pady=2)
+                                       relief='raised', bd=2,
+                                       command=lambda l=label: self.memory_function(l))
+                    button.grid(row=row_idx + self.main_button_rows_count, column=col_idx, sticky='nsew', padx=2,
+                                pady=2)
                     self.buttons.append(button)
-
 
     def memory_function(self, operation):
         """Handle memory operations."""
@@ -272,7 +272,7 @@ class Calculator:
         try:
             clipboard_text = self.master.clipboard_get()
             # Allow only numeric and operator characters
-            filtered_text = re.sub(r'[^0-9.+\-*/()^]', '', clipboard_text)
+            filtered_text = re.sub(r'[^0-9.+\-*/()^%]', '', clipboard_text)  # MODIFIED: Added %
             if filtered_text:
                 cursor_pos = self.display.index(tk.INSERT)
                 current = self.display_var.get()
@@ -296,24 +296,24 @@ class Calculator:
 
         # Prevent default Entry widget behavior for most keys by returning 'break'
         # The specific button_press will handle the display update
-        
+
         key_mapping = {
             '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
             '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
             '+': '+', '-': '-', '*': '*', '/': '/',
-            '.': '.', '(': '(', ')': ')', '^': '^', 
-            's': 'sqrt', 'f': 'fact', 'i': '1/x', 'p': 'pi', 
+            '.': '.', '(': '(', ')': ')', '^': '^', '%': '%',  # MODIFIED: Added %
+            's': 'sqrt', 'f': 'fact', 'i': '1/x', 'p': 'pi',
             'n': '+/-', 'l': 'log10',
         }
 
         shift_mapping = {
-            '8': '*', '6': '^' # Shift+8 for *, Shift+6 for ^
+            '8': '*', '6': '^', '5': '%'  # MODIFIED: Added Shift+5 for %
         }
 
         ctrl_mapping = {
-            'h': 'Hist', # Ctrl+H for History
+            'h': 'Hist',  # Ctrl+H for History
         }
-        
+
         # Check for Ctrl combinations first
         if event.state & 0x4 and char.lower() in ctrl_mapping:  # Ctrl pressed
             self.button_press(ctrl_mapping[char.lower()])
@@ -326,10 +326,10 @@ class Calculator:
         elif char in key_mapping:
             self.button_press(key_mapping[char])
             return 'break'
-        
+
         # For any other key that isn't explicitly handled, prevent default
         # behavior to keep display under calculator's control.
-        return 'break' 
+        return 'break'
 
     def set_cursor_position(self, position):
         """Centralized cursor positioning method."""
@@ -348,16 +348,17 @@ class Calculator:
         self.status_var.set(f"'{label}' pressed")
 
         # Clear initial zero for new input (except decimal or operators)
-        if current == "0" and label not in ['.', 'AC', 'DEL', '=', '+/-', 'Hist', '+', '-', '*', '/', '^', '(', ')']:
+        if current == "0" and label not in ['.', 'AC', 'DEL', '=', '+/-', 'Hist', '+', '-', '*', '/', '^', '%', '(',
+                                            ')']:  # MODIFIED: Added '%'
             current = ""
             cursor_pos = 0
-            
+
         # Reset history index if new input is being typed
         if self.history_index != len(self.history):
             self.history_index = len(self.history)
-            self.history_var.set("") # Clear history display if new input starts
+            self.history_var.set("")  # Clear history display if new input starts
 
-        is_operator = label in '+-*/^'
+        is_operator = label in '+-*/^%'  # MODIFIED: Added '%'
         is_function = label in ['sqrt', 'fact', '1/x', 'log10']
         is_constant = label == 'pi'
 
@@ -368,7 +369,7 @@ class Calculator:
         elif label == 'AC':
             self.display_var.set("0")
             self.history_var.set("")
-            self.history_index = 0 # Reset history index
+            self.history_index = 0  # Reset history index
             self.set_cursor_position(1)
             self.status_var.set("Calculator cleared")
         elif label == 'DEL':
@@ -384,8 +385,9 @@ class Calculator:
             self.set_cursor_position(len(self.display_var.get()))
         elif is_operator:
             # Prevent multiple operators in a row (except for leading minus)
-            if current and current[cursor_pos-1] in '+-*/^' and label in '+-*/^' and cursor_pos > 0:
-                new_text = current[:cursor_pos-1] + label + current[cursor_pos:]
+            if current and current[
+                cursor_pos - 1] in '+-*/^%' and label in '+-*/^%' and cursor_pos > 0:  # MODIFIED: Added '%'
+                new_text = current[:cursor_pos - 1] + label + current[cursor_pos:]
                 self.display_var.set(new_text)
                 self.set_cursor_position(cursor_pos)
             else:
@@ -434,11 +436,11 @@ class Calculator:
                 new_text = current[:cursor_pos] + "1/" + after_cursor
                 self.display_var.set(new_text)
                 self.set_cursor_position(cursor_pos + 2)
-        else: # For sqrt, fact, log10
+        else:  # For sqrt, fact, log10
             if number_match:
                 number = number_match.group(1)
                 start_pos = cursor_pos - len(number)
-                
+
                 # Function-specific validation
                 if func == 'fact':
                     try:
@@ -447,7 +449,7 @@ class Calculator:
                             self.display_var.set("Error: Factorial undefined")
                             self.status_var.set("Error: Factorial undefined")
                             return
-                        if num_val == 0: # 0! is 1
+                        if num_val == 0:  # 0! is 1
                             new_text = current[:start_pos] + '1' + after_cursor
                             self.display_var.set(new_text)
                             self.set_cursor_position(start_pos + 1)
@@ -478,14 +480,14 @@ class Calculator:
                         self.display_var.set("Error: Invalid input")
                         self.status_var.set("Error: Invalid input for log10")
                         return
-                    
+
                 new_text = current[:start_pos] + f"{func}({number})" + after_cursor
                 self.display_var.set(new_text)
                 self.set_cursor_position(start_pos + len(func) + len(number) + 2)
             else:
                 new_text = current[:cursor_pos] + f"{func}()" + after_cursor
                 self.display_var.set(new_text)
-                self.set_cursor_position(cursor_pos + len(func) + 1) # Place cursor inside parentheses
+                self.set_cursor_position(cursor_pos + len(func) + 1)  # Place cursor inside parentheses
 
     def handle_sign_toggle(self, current, cursor_pos):
         """Toggle the sign of the number before the cursor."""
@@ -507,44 +509,40 @@ class Calculator:
             self.set_cursor_position(cursor_pos + 1)
         self.status_var.set("Sign toggled")
 
-
     def _validate_expression(self, expr):
         """
         Validates the expression to ensure it only contains allowed characters
         before evaluation. This is a crucial security measure for eval().
         """
-        # Allowed characters: digits, operators, parentheses, decimal point, pi (symbol and text), function name characters
-        # The regex allows characters that form valid parts of mathematical expressions
-        allowed_chars_pattern = r"^[0-9+\-*/().^πa-zA-Z]*$" # Added a-zA-Z for function names
+        # MODIFIED: Added % to allowed characters
+        allowed_chars_pattern = r"^[0-9+\-*/().^%πa-zA-Z]*$"
 
         # Check for disallowed characters first
         if not re.match(allowed_chars_pattern, expr):
             return False, "Error: Invalid characters in expression"
 
         # Allowed function names that eval can safely call through safe_dict
-        # This is a whitelist approach to function names
         allowed_functions = ['sqrt', 'fact', 'sin', 'cos', 'tan', 'log10', 'ln', 'abs', 'pi', 'math']
-        
+
         # Temporarily replace allowed function names to ensure no other alphabetic chars are present
         temp_expr = expr
         for func in allowed_functions:
-            temp_expr = temp_expr.replace(func, '') # Remove allowed functions from temp string
+            temp_expr = temp_expr.replace(func, '')
 
-        # After removing allowed functions and pi, if there are still alphabetic characters, they are invalid.
+            # After removing allowed functions and pi, if there are still alphabetic characters, they are invalid.
         if re.search(r'[a-zA-Z]', temp_expr):
             return False, "Error: Disallowed function or variable name"
 
         return True, ""
 
-
     def calculate(self):
         """Evaluate the expression with improved error handling and safety."""
         expr = self.display_var.get()
-        
+
         # Skip calculation if the expression is already showing an error or is empty
         if not expr or expr.startswith("Error:"):
             return
-            
+
         # Validate expression for allowed characters
         is_valid, error_msg = self._validate_expression(expr)
         if not is_valid:
@@ -554,55 +552,63 @@ class Calculator:
 
         # Save expression to history (before processing for display)
         self.history.append(expr)
-        
+
+        # --- MODIFIED SECTION START ---
+
         # Pre-process the expression for eval()
-        expr = expr.replace('π', str(math.pi))  # Handle pi symbol
-        expr = expr.replace('pi', str(math.pi)) # Handle 'pi' string
-        expr = re.sub(r'(\d+)(\s*\*?\s*pi)', r'\1*math.pi', expr) # Handle implicit multiplication with pi, e.g., 2pi, 2*pi
-        expr = re.sub(r'(\d+(?:\.\d+)?|\))(\s*\()', r'\1*\2', expr) # Implicit multiplication for numbers/parentheses, e.g., 2(3) -> 2*(3)
-        expr = re.sub(r'(\d+(?:\.\d+)?|\))\s*([a-zA-Z_][a-zA-Z0-9_]*)\(', r'\1*\2(', expr) # Implicit multiplication with functions, e.g., 2sqrt(4) -> 2*sqrt(4)
-        expr = expr.replace('^', '**') # Convert power symbol
-        expr = re.sub(r'(\d+(?:\.\d+)?|\))\s*!', r'math.factorial(\1)', expr) # Convert factorial symbol x! to math.factorial(x)
-        
+        expr = expr.replace('π', str(math.pi))
+        expr = expr.replace('pi', str(math.pi))
+
+        # Handle percentages first, e.g., 50% -> (50/100)
+        expr = re.sub(r'(\d+\.?\d*)%', r'(\1/100)', expr)
+
+        # Handle implicit multiplication
+        expr = re.sub(r'(\d+(?:\.\d+)?|\))(\s*\()', r'\1*\2', expr)
+        expr = re.sub(r'(\d+(?:\.\d+)?|\))\s*([a-zA-Z_][a-zA-Z0-9_]*)\(', r'\1*\2(', expr)
+        # Handle implicit multiplication for parenthesis followed by pi, e.g. (2)pi
+        expr = re.sub(r'(\))(\s*pi)', r'\1*pi', expr)
+
+        expr = expr.replace('^', '**')
+        expr = re.sub(r'(\d+(?:\.\d+)?|\))\s*!', r'math.factorial(\1)', expr)
+
+        # --- MODIFIED SECTION END ---
+
         # Define safe functions for eval
         safe_dict = {
             'sqrt': math.sqrt,
-            'pi': math.pi, # Also include pi directly if not replaced as string
-            'fact': math.factorial, # Alias fact to math.factorial
+            'pi': math.pi,
+            'fact': math.factorial,
             'sin': math.sin,
             'cos': math.cos,
             'tan': math.tan,
             'log10': math.log10,
             'ln': math.log,
             'abs': abs,
-            'math': math # Allow access to math module for functions like math.pi, math.factorial
+            'math': math
         }
-        
+
         try:
             # Use eval with restricted globals and locals for safety
-            # __builtins__ is set to an empty dict to prevent access to built-in functions
             result = eval(expr, {"__builtins__": {}}, safe_dict)
-            
-            # Format result based on type
+
+            # Format result
             if isinstance(result, (int, float)):
-                # Round to 10 decimal places to avoid excessive floating point precision
-                # and remove trailing zeros/decimal point if integer
                 formatted_result = '{:.10f}'.format(result).rstrip('0').rstrip('.')
-                if not formatted_result: # Handle case like 0.0 becoming ""
+                if not formatted_result:
                     formatted_result = "0"
             else:
-                formatted_result = str(result) # For unexpected types
+                formatted_result = str(result)
 
             self.display_var.set(formatted_result)
-            
-            # Add result to history (along with original expression)
-            self.history[-1] = f"{self.history[-1]} = {formatted_result}" # Update last history item
-            self.history_index = len(self.history) # After calculation, history_index points to end
-            
+
+            # Add result to history
+            self.history[-1] = f"{self.history[-1]} = {formatted_result}"
+            self.history_index = len(self.history)
+
             # Update status bar
             self.status_var.set("Calculation complete")
-            self.history_var.set(self.history[-1]) # Show full entry in history label
-            
+            self.history_var.set(self.history[-1])
+
         except ZeroDivisionError:
             self.display_var.set("Error: Division by zero")
             self.status_var.set("Error: Division by zero")
@@ -615,10 +621,10 @@ class Calculator:
         except SyntaxError:
             self.display_var.set("Error: Invalid expression")
             self.status_var.set("Error: Invalid expression syntax")
-        except NameError as e: # Catch cases where undefined names are used
+        except NameError as e:
             self.display_var.set("Error: Invalid function/name")
             self.status_var.set(f"Error: Invalid function/name - {e}")
-        except TypeError as e: # Catch cases like factorial of float or negative
+        except TypeError as e:
             self.display_var.set(f"Error: Invalid type for operation")
             self.status_var.set(f"Error: Invalid type for operation - {e}")
         except Exception as e:
@@ -629,48 +635,43 @@ class Calculator:
         """Toggle between light and dark themes."""
         self.theme = "light" if self.theme == "dark" else "dark"
         self.current_theme = self.themes[self.theme]
-        
+
         self._apply_theme_to_widgets()
-        
+
         # Update status
         self.status_var.set(f"Theme changed to {self.theme.capitalize()}")
-            
+
     def navigate_history(self, direction):
         """Navigate through calculation history."""
         if not self.history:
             self.status_var.set("History is empty")
             return
-        
-        # Adjust history_index to point within valid range [0, len(history)-1]
-        # or len(history) if at the "new input" state.
-        if self.history_index == len(self.history): # Currently at new input state (typing new expression)
-            new_index = len(self.history) - 1 # Go to last history item
+
+        if self.history_index == len(self.history):
+            new_index = len(self.history) - 1
         else:
             new_index = self.history_index + direction
 
         if 0 <= new_index < len(self.history):
             self.history_index = new_index
             history_item = self.history[self.history_index]
-            
-            # Display full history entry in history_var, and result/expression in display_var
-            # We assume history items are stored as "expression = result" or just "expression"
+
             if '=' in history_item:
                 parts = history_item.split('=', 1)
                 self.history_var.set(parts[0].strip() + " =")
                 self.display_var.set(parts[1].strip())
-            else: # It's just an expression from a previous input
-                self.history_var.set("") # Clear history label if only expression is available
+            else:
+                self.history_var.set("")
                 self.display_var.set(history_item)
-            
+
             self.set_cursor_position(len(self.display_var.get()))
             self.status_var.set(f"History item {self.history_index + 1}/{len(self.history)}")
-        elif new_index == len(self.history): # Navigating past last history item (to empty input state)
+        elif new_index == len(self.history):
             self.history_index = len(self.history)
-            self.display_var.set("0") # Set display to '0' for new input
-            self.history_var.set("") # Clear history label
+            self.display_var.set("0")
+            self.history_var.set("")
             self.set_cursor_position(1)
             self.status_var.set("Ready for new input")
-
 
     def show_history_dialog(self):
         """Display a dialog with calculation history."""
@@ -678,68 +679,68 @@ class Calculator:
         history_window.title("Calculation History")
         history_window.geometry("300x400")
         history_window.configure(bg=self.current_theme['bg'])
-        
+
         history_window.transient(self.master)
         history_window.grab_set()
-        
+
         history_frame = tk.Frame(history_window, bg=self.current_theme['bg'])
         history_frame.pack(fill='both', expand=True, padx=10, pady=10)
-        
+
         scrollbar = tk.Scrollbar(history_frame)
         scrollbar.pack(side='right', fill='y')
-        
-        history_listbox = tk.Listbox(history_frame, bg=self.current_theme['display_bg'], 
-                                   fg=self.current_theme['display_fg'],
-                                   font=('Arial', 12), selectbackground=self.current_theme['button_fg'], height=15)
+
+        history_listbox = tk.Listbox(history_frame, bg=self.current_theme['display_bg'],
+                                     fg=self.current_theme['display_fg'],
+                                     font=('Arial', 12), selectbackground=self.current_theme['button_fg'], height=15)
         history_listbox.pack(side='left', fill='both', expand=True)
-        
+
         scrollbar.config(command=history_listbox.yview)
         history_listbox.config(yscrollcommand=scrollbar.set)
-        
+
         for item in self.history:
             history_listbox.insert(tk.END, item)
-            
+
         button_frame = tk.Frame(history_window, bg=self.current_theme['bg'])
         button_frame.pack(fill='x', padx=10, pady=5)
-            
+
         def use_selected():
             selected = history_listbox.curselection()
             if selected:
                 selected_item = self.history[selected[0]]
-                # Distinguish between expression and result for display
                 if '=' in selected_item:
                     parts = selected_item.split('=', 1)
                     self.history_var.set(parts[0].strip() + " =")
                     self.display_var.set(parts[1].strip())
-                else: # It's just a number (result from previous step)
-                    self.history_var.set("") # Clear history label
+                else:
+                    self.history_var.set("")
                     self.display_var.set(selected_item)
-                
+
                 self.set_cursor_position(len(self.display_var.get()))
-                self.history_index = selected[0] # Update history index to selected item
+                self.history_index = selected[0]
                 history_window.destroy()
                 self.status_var.set("History item selected")
-                
+
         use_button = tk.Button(button_frame, text="Use Selected", command=use_selected,
-                              bg=self.current_theme['equals_bg'], fg=self.current_theme['equals_fg'], padx=10, pady=5)
+                               bg=self.current_theme['equals_bg'], fg=self.current_theme['equals_fg'], padx=10, pady=5)
         use_button.pack(side='left', padx=5)
-        
+
         def clear_and_close():
             self.clear_history()
             history_window.destroy()
-            
+
         clear_button = tk.Button(button_frame, text="Clear History", command=clear_and_close,
-                               bg=self.current_theme['clear_bg'], fg=self.current_theme['clear_fg'], padx=10, pady=5)
+                                 bg=self.current_theme['clear_bg'], fg=self.current_theme['clear_fg'], padx=10, pady=5)
         clear_button.pack(side='right', padx=5)
-        
+
         history_listbox.bind('<Double-1>', lambda e: use_selected())
-        
+
     def clear_history(self):
         """Clear calculation history."""
         self.history = []
         self.history_index = 0
         self.history_var.set("")
         self.status_var.set("History cleared")
+
 
 if __name__ == "__main__":
     print("Creating Tkinter root window...")
