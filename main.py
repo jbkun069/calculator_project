@@ -91,7 +91,6 @@ class Calculator:
         self.master.bind('<KP_Enter>', lambda e: self.button_press('='))
         self.master.bind('<Escape>', lambda e: self.button_press('AC'))
         self.master.bind('<Delete>', lambda e: self.button_press('AC'))
-        self.master.bind('<BackSpace>', lambda e: self.button_press('DEL'))
         self.master.bind('<F1>', lambda e: self.button_press('sqrt'))
         self.master.bind('<F2>', lambda e: self.button_press('fact'))
         self.master.bind('<F3>', lambda e: self.button_press('1/x'))
@@ -285,10 +284,16 @@ class Calculator:
         except Exception as e:
             self.status_var.set(f"Error pasting: {e}")
 
+    # Replacement code for the whole method
     def handle_keyboard_input(self, event):
         """Handle keyboard input with simplified mappings and prevent default Entry behavior."""
         char = event.char
         keysym = event.keysym
+
+        # --- NEW: Added specific handling for BackSpace ---
+        if keysym == 'BackSpace':
+            self.button_press('DEL')
+            return 'break'
 
         # Allow cursor movement without interference from 'break'
         if keysym in ['Left', 'Right']:
@@ -301,13 +306,13 @@ class Calculator:
             '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
             '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
             '+': '+', '-': '-', '*': '*', '/': '/',
-            '.': '.', '(': '(', ')': ')', '^': '^', '%': '%',  # MODIFIED: Added %
+            '.': '.', '(': '(', ')': ')', '^': '^', '%': '%',
             's': 'sqrt', 'f': 'fact', 'i': '1/x', 'p': 'pi',
             'n': '+/-', 'l': 'log10',
         }
 
         shift_mapping = {
-            '8': '*', '6': '^', '5': '%'  # MODIFIED: Added Shift+5 for %
+            '8': '*', '6': '^', '5': '%'
         }
 
         ctrl_mapping = {
