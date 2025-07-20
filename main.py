@@ -85,6 +85,10 @@ class Calculator:
         self.display.pack(fill='both', expand=True, padx=5, pady=5)
         self.display.focus_set()
 
+        # Bind Enter and Numpad Enter on the Entry widget to '='
+        self.display.bind('<Return>', lambda e: self.button_press('='))
+        self.display.bind('<KP_Enter>', lambda e: self.button_press('='))
+
         # Keyboard bindings
         self.display.bind('<Key>', self.handle_keyboard_input)
         self.master.bind('<Return>', lambda e: self.button_press('='))
